@@ -1,4 +1,4 @@
-package vetrural.mvc.dto;
+package vetrural.mvc.dto.request;
 
 import lombok.Data;
 import vetrural.mvc.enumerations.RazaBovinoEnum;
@@ -9,6 +9,7 @@ import java.time.LocalDate;
 @Data
 public class CrearBovinoRequest {
     private String id;
+    private Long establecimientoId;
     private LocalDate nacimiento;
     private SexoEnum sexo;
     private String obs;

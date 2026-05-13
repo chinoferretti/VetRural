@@ -2,9 +2,12 @@ package vetrural.mvc.service;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import vetrural.mvc.entity.Bovino;
+import vetrural.mvc.entity.Usuario;
 import vetrural.mvc.entity.Vacunacion;
+import vetrural.mvc.enumerations.VacunaTipoEnum;
 import vetrural.mvc.repository.VacunacionRepository;
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -13,22 +16,20 @@ public class VacunacionService {
     @Autowired
     private VacunacionRepository vacunacionRepository;
 
-    public Vacunacion registrarVacunacion(String idBovino, LocalDate aftosa, LocalDate brucelosis, LocalDate carbunco, LocalDate clostridial, LocalDate ibrBvd) { // Registra una nueva vacunación para un bovino, incluyendo las fechas de cada vacuna
-        Vacunacion vacunacion = new Vacunacion();
-        vacunacion.setIdBovino(idBovino);
-        vacunacion.setAftosa(aftosa);
-        vacunacion.setBrucelosis(brucelosis);
-        vacunacion.setCarbunco(carbunco);
-        vacunacion.setClostridial(clostridial);
-        vacunacion.setIbr_bvd(ibrBvd);
-        return vacunacionRepository.save(vacunacion);
+    public Vacunacion registrarVacunacion(Bovino bovino, Usuario registradoPor, VacunaTipoEnum vacuna) {
+        Vacunacion v = new Vacunacion();
+        v.setBovino(bovino);
+        v.setRegistradoPor(registradoPor);
+        v.setFechaHora(LocalDateTime.now());
+        v.setVacuna(vacuna);
+        return vacunacionRepository.save(v);
     }
 
-    public List<Vacunacion> getVacunacionesPorBovino(String idBovino) { // Obtiene la lista de vacunaciones de un bovino especifico por su ID
-        return vacunacionRepository.findByIdBovino(idBovino);
+    public List<Vacunacion> getVacunacionesPorBovino(Bovino bovino) {
+        return vacunacionRepository.findByBovinoOrderByFechaHoraDesc(bovino);
     }
 
-    public List<Vacunacion> listarVacunaciones() { // Obtiene la lista de todas las vacunaciones registradas en SQL
+    public List<Vacunacion> listarVacunaciones() {
         return vacunacionRepository.findAll();
     }
 }

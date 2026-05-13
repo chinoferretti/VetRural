@@ -1,8 +1,8 @@
 package vetrural.mvc.entity;
 
-import java.time.LocalDate;
 import jakarta.persistence.*;
 import lombok.*;
+import vetrural.mvc.enumerations.VacunaTipoEnum;
 
 @Entity
 @Table(name = "Vacunacion")
@@ -11,16 +11,8 @@ import lombok.*;
 @Getter
 @Setter
 
-public class Vacunacion {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long idVacunacion;
-
-    private String idBovino;
-    
-    private LocalDate aftosa;
-    private LocalDate brucelosis;
-    private LocalDate carbunco;
-    private LocalDate clostridial;
-    private LocalDate ibr_bvd;
+public class Vacunacion extends EventoSanitario {
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private VacunaTipoEnum vacuna;
 }

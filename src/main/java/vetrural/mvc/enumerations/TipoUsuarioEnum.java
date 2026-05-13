@@ -2,6 +2,6 @@ package vetrural.mvc.enumerations;
 
 public enum TipoUsuarioEnum {
     Veterinario,
-    Productor_Agropecuario,
-    Otro;
+    Anotador,
+    Productor_Agropecuario;
 }

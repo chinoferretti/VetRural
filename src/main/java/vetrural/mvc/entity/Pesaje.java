@@ -10,11 +10,7 @@ import lombok.*;
 @Getter
 @Setter
 
-public class Pesaje {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long idPesaje;
-
-    private String idBovino;
-    private float peso;
+public class Pesaje extends EventoSanitario {
+    @Column(nullable = false)
+    private double peso;
 }

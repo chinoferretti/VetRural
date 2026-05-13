@@ -3,7 +3,12 @@ package vetrural.mvc.controller;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import vetrural.mvc.dto.request.CrearUsuarioRequest;
+import vetrural.mvc.dto.response.EstablecimientoResponse;
+import vetrural.mvc.dto.response.UsuarioResponse;
 import vetrural.mvc.entity.Usuario;
+import vetrural.mvc.mapper.EstablecimientoMapper;
+import vetrural.mvc.mapper.UsuarioMapper;
 import vetrural.mvc.service.UsuarioService;
 import java.util.List;
 
@@ -15,42 +20,43 @@ public class UsuarioController {
     private UsuarioService usuarioService;
 
     @GetMapping
-    public List<Usuario> listar() { // Obtiene la lista de todos los usuarios registrados en SQL
-        return usuarioService.listarUsuarios();
+    public List<UsuarioResponse> listar() {
+        return usuarioService.listarUsuarios().stream()
+                .map(UsuarioMapper::toResponse)
+                .toList();
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Usuario> getUsuario(@PathVariable Long id) { // Obtiene un usuario por su ID
+    public ResponseEntity<UsuarioResponse> getUsuario(@PathVariable Long id) {
         return usuarioService.getUsuario(id)
+                .map(UsuarioMapper::toResponse)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
     @PostMapping
-    public ResponseEntity<Usuario> crear(@RequestBody Usuario usuario) { // Crea un nuevo usuario
-        return ResponseEntity.ok(usuarioService.guardarUsuario(usuario));
+    public ResponseEntity<UsuarioResponse> crear(@RequestBody CrearUsuarioRequest req) {
+        Usuario u = usuarioService.crear(req.getNombre(), req.getApellido(), req.getEmail(), req.getContrasena(), req.getTipo());
+        return ResponseEntity.ok(UsuarioMapper.toResponse(u));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> eliminar(@PathVariable Long id) { // Elimina un usuario por su ID
+    public ResponseEntity<Void> eliminar(@PathVariable Long id) {
         usuarioService.eliminarUsuario(id);
         return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/veterinarios")
-    public List<Usuario> listarVeterinarios() { // Obtiene la lista de todos los veterinarios registrados en SQL
-        return usuarioService.listarVeterinarios();
+    public List<UsuarioResponse> listarVeterinarios() {
+        return usuarioService.listarVeterinarios().stream()
+                .map(UsuarioMapper::toResponse)
+                .toList();
     }
 
-    @GetMapping("/veterinarios/{id}/existe")
-    public boolean existeVeterinario(@PathVariable Long id) { // Verifica si existe un veterinario por su ID, devolviendo true o false
-        return usuarioService.existeVeterinario(id);
-    }
-
-    @GetMapping("/veterinarios/{id}")
-    public ResponseEntity<Usuario> getVeterinario(@PathVariable Long id) { // Obtiene un veterinario por su ID, verificando que el tipo de usuario sea Veterinario
-        return usuarioService.getVeterinario(id)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+    @GetMapping("/{id}/establecimientos")
+    public List<EstablecimientoResponse> getEstablecimientos(@PathVariable Long id) {
+        return usuarioService.getEstablecimientos(id).stream()
+                .map(EstablecimientoMapper::toResponse)
+                .toList();
     }
 }

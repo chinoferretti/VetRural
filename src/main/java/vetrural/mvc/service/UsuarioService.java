@@ -2,6 +2,7 @@ package vetrural.mvc.service;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import vetrural.mvc.entity.Establecimiento;
 import vetrural.mvc.entity.Usuario;
 import vetrural.mvc.enumerations.TipoUsuarioEnum;
 import vetrural.mvc.repository.UsuarioRepository;
@@ -14,31 +15,42 @@ public class UsuarioService {
     @Autowired
     private UsuarioRepository usuarioRepository;
 
-    public boolean existeVeterinario(Long idVet) { // Verifica si existe un veterinario por su ID
-        return usuarioRepository.findById(idVet).map(u -> u.getTipo() == TipoUsuarioEnum.Veterinario).orElse(false);
+    public Usuario crear(String nombre, String apellido, String email, String contrasena, TipoUsuarioEnum tipo) {
+        Usuario u = new Usuario();
+        u.setNombre(nombre);
+        u.setApellido(apellido);
+        u.setEmail(email);
+        u.setContrasena(contrasena);
+        u.setTipo(tipo);
+        return usuarioRepository.save(u);
     }
 
-    public Optional<Usuario> getVeterinario(Long idVet) { // Obtiene un veterinario por su ID, verificando que el tipo de usuario sea Veterinario
-        return usuarioRepository.findById(idVet).filter(u -> u.getTipo() == TipoUsuarioEnum.Veterinario);
-    }
-
-    public Optional<Usuario> getUsuario(Long idUsuario) { // Obtiene un usuario por su ID
+    public Optional<Usuario> getUsuario(Long idUsuario) {
         return usuarioRepository.findById(idUsuario);
     }
 
-    public Usuario guardarUsuario(Usuario usuario) { // Guarda un nuevo usuario o actualiza uno existente en SQL
-        return usuarioRepository.save(usuario);
+    public Usuario obtenerOFallar(Long idUsuario) {
+        return usuarioRepository.findById(idUsuario)
+                .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado: " + idUsuario));
     }
 
-    public List<Usuario> listarUsuarios() { // Obtiene la lista de todos los usuarios registrados en SQL
+    public List<Usuario> listarUsuarios() {
         return usuarioRepository.findAll();
     }
 
-    public List<Usuario> listarVeterinarios() { // Obtiene la lista de todos los veterinarios registrados en SQL
+    public List<Usuario> listarVeterinarios() {
         return usuarioRepository.findByTipo(TipoUsuarioEnum.Veterinario);
     }
 
-    public void eliminarUsuario(Long idUsuario) { // Elimina un usuario por su ID de SQL
+    public List<Establecimiento> getEstablecimientos(Long idUsuario) {
+        return obtenerOFallar(idUsuario).getEstablecimientos();
+    }
+
+    public void eliminarUsuario(Long idUsuario) {
         usuarioRepository.deleteById(idUsuario);
+    }
+
+    public boolean puedeRegistrarEventoSanitario(Usuario u) {
+        return u.getTipo() == TipoUsuarioEnum.Veterinario || u.getTipo() == TipoUsuarioEnum.Anotador;
     }
 }

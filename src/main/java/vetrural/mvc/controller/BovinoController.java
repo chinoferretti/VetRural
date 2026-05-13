@@ -3,9 +3,11 @@ package vetrural.mvc.controller;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import vetrural.mvc.dto.CrearBovinoRequest;
+import vetrural.mvc.dto.request.CrearBovinoRapidoRequest;
+import vetrural.mvc.dto.request.CrearBovinoRequest;
+import vetrural.mvc.dto.response.BovinoResponse;
 import vetrural.mvc.entity.Bovino;
-import vetrural.mvc.enumerations.SexoEnum;
+import vetrural.mvc.mapper.BovinoMapper;
 import vetrural.mvc.service.BovinoService;
 import java.util.List;
 
@@ -17,62 +19,78 @@ public class BovinoController {
     private BovinoService bovinoService;
 
     @GetMapping
-    public List<Bovino> listar() { // Obtiene la lista de todos los bovinos registrados en SQL
-        return bovinoService.listarBovinos();
+    public List<BovinoResponse> listar() {
+        return bovinoService.listarBovinos().stream()
+                .map(BovinoMapper::toResponse)
+                .toList();
     }
 
-    @GetMapping("/{id}") 
-    public ResponseEntity<Bovino> getBovino(@PathVariable String id) { // Obtiene un bovino por su ID
-        return bovinoService.getBovino(id).map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
+    @GetMapping("/{id}")
+    public ResponseEntity<BovinoResponse> getBovino(@PathVariable String id) {
+        return bovinoService.getBovino(id)
+                .map(BovinoMapper::toResponse)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 
     @PostMapping
-    public ResponseEntity<Bovino> crear(@RequestBody CrearBovinoRequest req) { // Crea un nuevo bovino a partir de los datos recibidos en el request body y lo guarda en SQL
-        Bovino bovino = bovinoService.crearBovino(req.getId(), req.getNacimiento(), req.getSexo(), req.getObs(), req.getRaza(), req.getTipo());
-        return ResponseEntity.ok(bovino);
+    public ResponseEntity<BovinoResponse> crear(@RequestBody CrearBovinoRequest req) {
+        Bovino bovino = bovinoService.crearBovino(
+                req.getId(),
+                req.getEstablecimientoId(),
+                req.getNacimiento(),
+                req.getSexo(),
+                req.getObs(),
+                req.getRaza(),
+                req.getTipo()
+        );
+        return ResponseEntity.ok(BovinoMapper.toResponse(bovino));
     }
 
-    @PostMapping
-    public ResponseEntity<Bovino> crearRapido(@RequestParam String id, @RequestParam String sexo) { // Crea un nuevo bovino con solo ID y sexo, dejando el resto de los campos nulos, y lo guarda en SQL
-        Bovino bovino = bovinoService.crearBovinoRapido(id, SexoEnum.valueOf(sexo.toUpperCase()));
-        return ResponseEntity.ok(bovino);
+    @PostMapping("/rapido")
+    public ResponseEntity<BovinoResponse> crearRapido(@RequestBody CrearBovinoRapidoRequest req) {
+        Bovino bovino = bovinoService.crearBovinoRapido(req.getId(), req.getEstablecimientoId(), req.getSexo());
+        return ResponseEntity.ok(BovinoMapper.toResponse(bovino));
     }
 
     @PutMapping("/{id}/observaciones")
-    public ResponseEntity<Bovino> actualizarObs(@PathVariable String id, @RequestParam String obs) { // Actualiza las observaciones de un bovino existente por su ID
-        return ResponseEntity.ok(bovinoService.actualizarObservaciones(id, obs));
+    public ResponseEntity<BovinoResponse> actualizarObs(@PathVariable String id, @RequestParam String obs) {
+        Bovino bovino = bovinoService.actualizarObservaciones(id, obs);
+        return ResponseEntity.ok(BovinoMapper.toResponse(bovino));
+    }
+
+    @PutMapping("/{id}/lote")
+    public ResponseEntity<Void> asignarLote(@PathVariable String id, @RequestParam String lote) {
+        bovinoService.anadirBovinoALote(id, lote);
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/{id}/existe")
+    public boolean existeBovino(@PathVariable String id) {
+        return bovinoService.existeBovino(id);
     }
 
     @GetMapping("/lotes")
-    public List<String> getLotes() { // Obtiene la lista de todos los lotes registrados en SQL
+    public List<String> getLotes() {
         return bovinoService.getLotes();
     }
 
     @GetMapping("/lotes/{lote}")
-    public List<Bovino> getBovinosPorLote(@PathVariable String lote) { // Obtiene la lista de bovinos de un lote específico por su nombre de lote
-        return bovinoService.listarBovinosPorLote(lote);
+    public List<BovinoResponse> getBovinosPorLote(@PathVariable String lote) {
+        return bovinoService.listarBovinosPorLote(lote).stream()
+                .map(BovinoMapper::toResponse)
+                .toList();
     }
 
     @PostMapping("/lotes")
-    public ResponseEntity<Void> crearLote(@RequestParam String nombre, @RequestBody List<String> idBovinos) { // Crea un nuevo lote con un nombre y añade una lista de IDs de bovinos
+    public ResponseEntity<Void> crearLote(@RequestParam String nombre, @RequestBody List<String> idBovinos) {
         bovinoService.crearLote(nombre, idBovinos);
         return ResponseEntity.ok().build();
     }
 
     @DeleteMapping("/lotes")
-    public ResponseEntity<Void> eliminarLote(@RequestParam String nombre) { // Elimina un lote por su nombre, desvinculando los bovinos que pertenecían a ese lote
+    public ResponseEntity<Void> eliminarLote(@RequestParam String nombre) {
         bovinoService.eliminarLote(nombre);
         return ResponseEntity.ok().build();
-    }
-
-     @PutMapping("/{id}/lote")
-    public ResponseEntity<Void> asignarLote(@PathVariable String id, @RequestParam String lote) { // Asigna un bovino a un lote existente por su ID y el nombre del lote
-        bovinoService.anadirBovinoALote(id, lote);
-        return ResponseEntity.ok().build();
-    }
-
-    @GetMapping("/{id}/existe") 
-    public boolean existeBovino(@PathVariable String id) { // Verifica si un bovino existe por su ID, devolviendo true o false
-        return bovinoService.existeBovino(id);
     }
 }

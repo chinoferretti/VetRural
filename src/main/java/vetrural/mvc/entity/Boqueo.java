@@ -13,17 +13,16 @@ import vetrural.mvc.enumerations.DentaduraEnum;
 @Getter
 @Setter
 
-public class Boqueo {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long idBoqueo;
-
-    private String idBovino;
-
+public class Boqueo extends EventoSanitario {
     @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     private DientesEnum dientes;
+
     @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     private DeterioroEnum deterioro;
+
     @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     private DentaduraEnum dentadura;
 }

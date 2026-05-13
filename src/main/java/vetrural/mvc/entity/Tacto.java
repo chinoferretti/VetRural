@@ -12,16 +12,11 @@ import vetrural.mvc.enumerations.PeriodoEnum;
 @Getter
 @Setter
 
-public class Tacto {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long idTacto;
-
-    private String idBovino;
-
+public class Tacto extends EventoSanitario {
     @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     private SituacionEnum situacion;
+
     @Enumerated(EnumType.STRING)
     private PeriodoEnum periodo;
-
 }
