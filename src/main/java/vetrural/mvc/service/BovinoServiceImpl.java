@@ -131,6 +131,27 @@ public class BovinoServiceImpl implements BovinoService {
     }
 
     @Override
+    public Bovino actualizarBovino(Long id, String caravana, Long establecimientoId, LocalDate nacimiento, SexoEnum sexo, String lote, RazaBovinoEnum raza, TipoBovinoEnum tipo, String obs) {
+        Bovino bovino = obtenerOFallar(id);
+        if (caravana != null && !caravana.equals(bovino.getCaravana())) {
+            if (bovinoRepository.existsByCaravana(caravana)) {
+                throw new IllegalArgumentException("Ya existe un bovino con caravana: " + caravana);
+            }
+            bovino.setCaravana(caravana);
+        }
+        if (establecimientoId != null) {
+            bovino.setEstablecimiento(establecimientoService.obtenerOFallar(establecimientoId));
+        }
+        bovino.setNacimiento(nacimiento);
+        bovino.setSexo(sexo);
+        bovino.setLote(lote);
+        bovino.setRaza(raza);
+        bovino.setTipo(tipo);
+        bovino.setObservaciones(obs);
+        return bovinoRepository.save(bovino);
+    }
+
+    @Override
     public void eliminarLote(String nombreLote) {
         List<Bovino> bovinos = bovinoRepository.findByLote(nombreLote);
         bovinos.forEach(b -> b.setLote(null));

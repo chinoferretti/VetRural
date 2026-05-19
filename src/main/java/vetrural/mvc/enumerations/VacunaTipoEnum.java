@@ -5,5 +5,6 @@ public enum VacunaTipoEnum {
     Brucelosis,
     Carbunco,
     Clostridial,
-    IBR_BVD;
+    IBR,
+    BVD;
 }
