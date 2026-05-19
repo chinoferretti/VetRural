@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\Facup\\\\Desktop\\\\VetRural_FrontEnd\" -Recurse -Depth 2 | Where-Object { $_.PSIsContainer } | Select-Object FullName | Sort-Object FullName)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\chino\\\\OneDrive\\\\Escritorio\\\\UADE\\\\A3C1\\\\Seminario\\\\VetRural_FrontEnd \\(2\\)\\\\VetRural_FrontEnd\" -Recurse -Directory)",
+      "Bash(Select-Object -First 20)",
+      "Bash(Format-Table FullName)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\chino\\\\OneDrive\\\\Escritorio\\\\UADE\\\\A3C1\\\\Seminario\\\\VetRural_FrontEnd \\(2\\)\\\\VetRural_FrontEnd\" -Recurse -ErrorAction SilentlyContinue)",
+      "Bash(Select-Object -ExpandProperty FullName)",
+      "PowerShell(head *)",
+      "Bash(Sort-Object)",
+      "Bash(npm run *)",
+      "Bash(del *)",
+      "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\chino\\\\OneDrive\\\\Escritorio\\\\UADE\\\\A3C1\\\\Seminario\\\\VetRural_FrontEnd \\(2\\)\\\\VetRural_FrontEnd\" -Recurse -File | Select-Object -First 100 | ForEach-Object { $_.FullName })",
+      "Bash(npm install *)",
+      "Bash(npx vite *)"
+    ]
+  }
+}
