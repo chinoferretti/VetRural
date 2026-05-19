@@ -16,8 +16,11 @@ import lombok.*;
 
 public class Bovino {
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
     @Column(length = 15, nullable = false, unique = true) // Caravana electrónica de hasta 15 dígitos
-    private String idAnimal;
+    private String caravana;
 
     @ManyToOne(optional = false)
     @JoinColumn(name = "establecimiento_id", nullable = false)

@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
 public class VacunacionResponse {
     private Long id;
     private LocalDateTime fechaHora;
-    private String bovinoId;
+    private Long bovinoId;
     private Long registradoPorId;
     private VacunaTipoEnum vacuna;
 }

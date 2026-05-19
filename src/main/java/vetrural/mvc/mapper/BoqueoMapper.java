@@ -11,7 +11,7 @@ public final class BoqueoMapper {
         return new BoqueoResponse(
                 b.getId(),
                 b.getFechaHora(),
-                b.getBovino().getIdAnimal(),
+                b.getBovino().getId(),
                 b.getRegistradoPor().getIdUsuario(),
                 b.getDientes(),
                 b.getDeterioro(),

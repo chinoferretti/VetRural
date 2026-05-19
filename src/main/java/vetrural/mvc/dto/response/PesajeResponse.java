@@ -11,7 +11,7 @@ import java.time.LocalDateTime;
 public class PesajeResponse {
     private Long id;
     private LocalDateTime fechaHora;
-    private String bovinoId;
+    private Long bovinoId;
     private Long registradoPorId;
     private double peso;
 }

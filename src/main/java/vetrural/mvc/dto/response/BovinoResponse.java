@@ -12,7 +12,8 @@ import java.time.LocalDate;
 @NoArgsConstructor
 @AllArgsConstructor
 public class BovinoResponse {
-    private String idAnimal;
+    private Long id;
+    private String caravana;
     private Long establecimientoId;
     private RazaBovinoEnum raza;
     private TipoBovinoEnum tipo;

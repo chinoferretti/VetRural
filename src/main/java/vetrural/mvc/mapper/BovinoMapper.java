@@ -9,7 +9,8 @@ public final class BovinoMapper {
 
     public static BovinoResponse toResponse(Bovino b) {
         return new BovinoResponse(
-                b.getIdAnimal(),
+                b.getId(),
+                b.getCaravana(),
                 b.getEstablecimiento() != null ? b.getEstablecimiento().getId() : null,
                 b.getRaza(),
                 b.getTipo(),

@@ -11,7 +11,7 @@ public final class TactoMapper {
         return new TactoResponse(
                 t.getId(),
                 t.getFechaHora(),
-                t.getBovino().getIdAnimal(),
+                t.getBovino().getId(),
                 t.getRegistradoPor().getIdUsuario(),
                 t.getSituacion(),
                 t.getPeriodo()

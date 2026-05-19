@@ -1,5 +1,6 @@
 package vetrural.mvc.controller;
 
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -11,6 +12,7 @@ import vetrural.mvc.mapper.BovinoMapper;
 import vetrural.mvc.mapper.EstablecimientoMapper;
 import vetrural.mvc.service.BovinoService;
 import vetrural.mvc.service.EstablecimientoService;
+import java.net.URI;
 import java.util.List;
 
 @RestController
@@ -39,9 +41,10 @@ public class EstablecimientoController {
     }
 
     @PostMapping
-    public ResponseEntity<EstablecimientoResponse> crear(@RequestBody CrearEstablecimientoRequest req) {
+    public ResponseEntity<EstablecimientoResponse> crear(@Valid @RequestBody CrearEstablecimientoRequest req) {
         Establecimiento e = establecimientoService.crear(req.getNombre());
-        return ResponseEntity.ok(EstablecimientoMapper.toResponse(e));
+        URI location = URI.create("/api/establecimientos/" + e.getId());
+        return ResponseEntity.created(location).body(EstablecimientoMapper.toResponse(e));
     }
 
     @GetMapping("/{id}/bovinos")
@@ -52,14 +55,14 @@ public class EstablecimientoController {
     }
 
     @PostMapping("/{id}/usuarios/{usuarioId}")
-    public ResponseEntity<EstablecimientoResponse> asociarUsuario(@PathVariable Long id, @PathVariable Long usuarioId) {
-        Establecimiento e = establecimientoService.asociarUsuario(id, usuarioId);
-        return ResponseEntity.ok(EstablecimientoMapper.toResponse(e));
+    public ResponseEntity<Void> asociarUsuario(@PathVariable Long id, @PathVariable Long usuarioId) {
+        establecimientoService.asociarUsuario(id, usuarioId);
+        return ResponseEntity.noContent().build();
     }
 
     @DeleteMapping("/{id}/usuarios/{usuarioId}")
-    public ResponseEntity<EstablecimientoResponse> desasociarUsuario(@PathVariable Long id, @PathVariable Long usuarioId) {
-        Establecimiento e = establecimientoService.desasociarUsuario(id, usuarioId);
-        return ResponseEntity.ok(EstablecimientoMapper.toResponse(e));
+    public ResponseEntity<Void> desasociarUsuario(@PathVariable Long id, @PathVariable Long usuarioId) {
+        establecimientoService.desasociarUsuario(id, usuarioId);
+        return ResponseEntity.noContent().build();
     }
 }

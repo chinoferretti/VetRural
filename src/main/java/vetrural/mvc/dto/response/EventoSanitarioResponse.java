@@ -12,6 +12,6 @@ public class EventoSanitarioResponse {
     private Long id;
     private String tipo;
     private LocalDateTime fechaHora;
-    private String bovinoId;
+    private Long bovinoId;
     private Long registradoPorId;
 }

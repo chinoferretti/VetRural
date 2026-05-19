@@ -11,7 +11,7 @@ public final class VacunacionMapper {
         return new VacunacionResponse(
                 v.getId(),
                 v.getFechaHora(),
-                v.getBovino().getIdAnimal(),
+                v.getBovino().getId(),
                 v.getRegistradoPor().getIdUsuario(),
                 v.getVacuna()
         );

@@ -1,309 +1,375 @@
 # Bug Report — VetRural API
 
-Fecha: 2026-05-13
+Fecha: 2026-05-19
 Versión testeada: Spring Boot 4.0.6 / SQLite
-Rama: `test`
-Revisión: análisis estático completo (entidades, controllers, services, repositories, mappers, DTOs, pom.xml)
+Rama: `main`
+Revisión: análisis estático completo del estado actual del código tras refactor de modelo de dominio
+
+> **Nota:** los bugs BUG-01..BUG-09 del informe anterior (sobreescritura por `merge`, lotes con IDs inexistentes, status codes incorrectos, contraseñas en plano, etc.) ya están resueltos en `main`. Esta revisión cubre los issues remanentes detectados tras el refactor.
 
 ---
 
-## BUG-01 — `pom.xml` declara Spring Boot 4.0.6, versión inexistente
+## BUG-01 — `Usuario.email` no tiene constraint de unicidad en la DB
 
-**Severidad:** Crítica
-**Archivo:** `pom.xml:8`
+**Severidad:** Alta
+**Archivos:** `Usuario.java:24`, `UsuarioServiceImpl.java:25-27`
 **¿Fixeado?** No
 
 ### Descripción
 
-La versión `4.0.6` de `spring-boot-starter-parent` no existe en Maven Central ni en ningún repositorio público conocido. La versión estable más reciente de Spring Boot es la serie 3.x. Al ejecutar `mvn install` o `mvn spring-boot:run`, Maven no puede resolver el POM padre y el build falla antes de compilar una sola línea.
+El spec técnico (sección 4.2 y sección 14) exige que `Usuario.email` sea `unique = true` a nivel columna. La entidad actual solo declara `private String email;` sin `@Column`. La unicidad se valida únicamente en el service:
 
-```xml
-<!-- ACTUAL — versión inexistente -->
-<version>4.0.6</version>
+```java
+// UsuarioServiceImpl.java:25-27
+if (usuarioRepository.findByEmail(email).isPresent()) {
+    throw new IllegalArgumentException("Ya existe un usuario con email: " + email);
+}
+```
 
-<!-- CORRECTO (usar versión estable real) -->
-<version>3.3.5</version>
+Bajo concurrencia, dos requests con el mismo email pueden pasar la validación simultáneamente (ambos hacen `findByEmail` antes de que cualquiera commitee) y ambos persistir. La DB no opone resistencia porque la columna no tiene `unique`.
+
+**Fix:**
+```java
+// Usuario.java
+@Column(unique = true, nullable = false)
+private String email;
+```
+
+La validación en el service queda como defensa en profundidad para devolver 400 con mensaje accionable; el constraint de DB cubre el caso de carrera devolviendo `DataIntegrityViolationException` (que termina en 500, pero al menos no permite duplicados).
+
+---
+
+## BUG-02 — `Tacto` permite combinaciones inválidas de `situacion` y `periodo`
+
+**Severidad:** Alta
+**Archivos:** `TactoServiceImpl.java:22-30`, `RegistrarTactoRequest.java`
+**¿Fixeado?** No
+
+### Descripción
+
+El spec técnico (5.5) y el spec funcional (CU-03) establecen que `periodo` solo aplica si `situacion = Preñada`. Hoy:
+
+- `RegistrarTactoRequest.periodo` es opcional (sin `@NotNull`).
+- `TactoServiceImpl.registrarTacto` no valida coherencia.
+
+Casos inválidos que el sistema acepta:
+- `situacion = Apta_Servicio` + `periodo = Mas_6_Meses` → datos contradictorios persistidos.
+- `situacion = Preñada` sin `periodo` → registro incompleto, no se sabe el período.
+
+**Fix:**
+```java
+// TactoServiceImpl.registrarTacto
+if (situacion == SituacionEnum.Prenada && periodo == null) {
+    throw new IllegalArgumentException("El periodo es obligatorio cuando la situacion es Prenada");
+}
+if (situacion != SituacionEnum.Prenada && periodo != null) {
+    throw new IllegalArgumentException("El periodo solo aplica cuando la situacion es Prenada");
+}
 ```
 
 ---
 
-## BUG-02 — `pom.xml` declara dependencias de test que no existen en Maven
+## BUG-03 — Borrar `Usuario` asociado a un `Establecimiento` lanza 500 por FK
 
-**Severidad:** Crítica
-**Archivo:** `pom.xml:64-74`
+**Severidad:** Alta
+**Archivo:** `UsuarioServiceImpl.java:64-69`
 **¿Fixeado?** No
 
 ### Descripción
 
-Los tres artefactos declarados en scope `test` no existen en Maven Central para ninguna versión de Spring Boot:
+`eliminarUsuario` hace `deleteById` directo. Si el usuario figura en la tabla join `establecimiento_usuarios`, la FK del lado dueño (`Establecimiento.usuarios`) impide el borrado:
 
-- `spring-boot-starter-jdbc-test`
-- `spring-boot-starter-thymeleaf-test`
-- `spring-boot-starter-webmvc-test`
+```java
+// ACTUAL — falla por FK si el usuario está en algún establecimiento
+public void eliminarUsuario(Long idUsuario) {
+    if (!usuarioRepository.existsById(idUsuario)) {
+        throw new EntityNotFoundException("Usuario no encontrado: " + idUsuario);
+    }
+    usuarioRepository.deleteById(idUsuario);
+}
+```
 
-El artefacto estándar para testing en Spring Boot es `spring-boot-starter-test` (incluye JUnit 5, MockMvc, AssertJ). Adicionalmente, `spring-boot-starter-webmvc` (línea 47) tampoco existe: el artefacto correcto es `spring-boot-starter-web`.
+Resultado: `DataIntegrityViolationException` → 500 vía catch-all del `GlobalExceptionHandler`. El cliente recibe un error genérico sin pista de qué hacer.
+
+Idéntico problema en `BovinoServiceImpl.eliminarBovino` (`:58-63`) si el bovino tiene `EventoSanitario` asociados (FK `nullable=false` en `EventoSanitario.bovino`). Hoy no hay endpoint `DELETE /api/bovinos/{id}` expuesto, pero el método público en el service queda como trampa para futuros consumidores.
+
+**Fix opciones:**
+1. Desasociar primero: recorrer `u.getEstablecimientos()` y removerlo de cada uno antes de borrar.
+2. Lanzar `IllegalArgumentException` si tiene asociaciones, exigiendo que el cliente desasocie explícitamente.
+3. Para `Bovino`: idem con eventos sanitarios (opción 2 es más segura — no se borran eventos por accidente).
+
+---
+
+## BUG-04 — `@RequestParam` de operaciones de lote/observaciones no validan `@NotBlank`
+
+**Severidad:** Media
+**Archivos:** `BovinoController.java:74,80,98,105`
+**¿Fixeado?** No
+
+### Descripción
+
+Cuatro endpoints reciben strings como query param sin validación:
+
+```java
+// :74 — PUT /api/bovinos/{id}/observaciones
+@RequestParam String obs
+
+// :80 — PUT /api/bovinos/{id}/lote
+@RequestParam String lote
+
+// :98 — POST /api/bovinos/lotes
+@RequestParam String nombre
+
+// :105 — DELETE /api/bovinos/lotes
+@RequestParam String nombre
+```
+
+Una llamada con `?lote=` (vacío) o `?lote=%20%20%20` (espacios) entra al service y persiste un lote con nombre vacío/whitespace. Lo mismo para crear un lote con nombre vacío o asignar observaciones vacías.
+
+**Fix:** anotar con `@NotBlank` (requiere `@Validated` en el controller):
+
+```java
+@RestController
+@RequestMapping("/api/bovinos")
+@Validated
+public class BovinoController {
+    ...
+    @PutMapping("/{id}/lote")
+    public ResponseEntity<Void> asignarLote(@PathVariable Long id, @RequestParam @NotBlank String lote) { ... }
+}
+```
+
+Alternativa: mover los strings al body con DTO + `@Valid` (más convencional para PUT/POST que modifican texto).
+
+---
+
+## BUG-05 — `functional-spec.md` describe entidades y casos de uso eliminados en el refactor
+
+**Severidad:** Media
+**Archivo:** `docs/functional-spec.md`
+**¿Fixeado?** No
+
+### Descripción
+
+El spec funcional sigue documentando el modelo previo al refactor. Inconsistencias concretas:
+
+- **CU-01 "Abrir sesión" y CU-07 "Cerrar sesión"** describen la entidad `Sesion`, eliminada (TD-07 del spec técnico).
+- **RN-01, RN-02, RN-06** referencian sesiones.
+- **CU-06** describe vacunación con cinco fechas (`Aftosa`, `Brucelosis`, ...). El modelo nuevo es una fila por vacuna con `VacunaTipoEnum` (TD-06).
+- **Sección 6: estado de `Sesion`** — entidad inexistente.
+- **Sección 8 (glosario):** define "Sesión" como concepto vigente.
+- **Asunción 9.4** sobre estadísticas de `Sesion` — obsoleta.
+- **Asunción 9.5** sobre `Animal` como base para otras especies — `Animal` fue eliminada.
+- **Flujo "Registro rápido":** usa `GET /api/bovinos/{id}/existe`; el endpoint real es `GET /api/bovinos/existe?caravana=...` (`BovinoController.java:46-49`).
+- **No menciona `Establecimiento`** como entidad/actor, siendo central en el modelo nuevo.
+
+**Fix:** reescribir el spec funcional para reflejar el modelo actual: sin sesión, vacunación por evento individual, establecimiento como contexto obligatorio de cada bovino.
+
+---
+
+## BUG-06 — Lotes globales en lugar de scoped por establecimiento
+
+**Severidad:** Media
+**Archivos:** `Bovino.java:39`, `BovinoController.java:85-95,104-108`, `BovinoServiceImpl.java:98-111,134-138`
+**¿Fixeado?** No
+
+### Descripción
+
+`Bovino.lote` es un `String` global. `GET /api/bovinos/lotes` y `GET /api/bovinos/lotes/{lote}` no filtran por establecimiento. Dos bovinos de establecimientos distintos con `lote="Pasto Norte"` quedan en el mismo "lote conceptual".
+
+Esto está marcado como `[ASSUMPTION]` en spec técnico (sección 13) y como trade-off en TD-05, pero el código no impide la colisión y los endpoints no permiten desambiguar.
+
+**Fix opciones:**
+1. Si el negocio confirma scope por establecimiento: cambiar endpoints a `/api/establecimientos/{id}/lotes` y query a `WHERE establecimiento_id = ? AND lote = ?`.
+2. Modelar `Lote` como entidad con FK a `Establecimiento` (rompe TD-05).
+
+Pendiente de decisión de producto antes de fixear.
+
+---
+
+## BUG-07 — `Location` headers en `MangaController` apuntan a recursos inestables
+
+**Severidad:** Media
+**Archivo:** `MangaController.java:39,46,53,60`
+**¿Fixeado?** No
+
+### Descripción
+
+Los POST de manga retornan `Location` apuntando a endpoints que no identifican unívocamente al evento creado:
+
+```java
+// :39 — registrarTacto
+URI location = URI.create("/api/manga/" + req.getBovinoId() + "/ultimo-tacto");
+```
+
+`ultimo-tacto` devuelve "el último", no "el que se acaba de crear". Un segundo POST cambia el recurso al que apunta el `Location` del primer POST. Lo mismo para `ultimo-pesaje`, `ultimo-boqueo`. En `registrarVacunacion` el `Location` apunta a una colección (`/vacunaciones`), no a un recurso individual.
+
+**Fix opciones:**
+1. Agregar `GET /api/manga/eventos/{id}` y apuntar `Location` ahí.
+2. Quitar el `Location` (no es obligatorio en 201, mejor omitirlo que devolverlo incorrecto).
+
+---
+
+## BUG-08 — `caravana` no se valida como solo dígitos
+
+**Severidad:** Media (depende de regla de negocio)
+**Archivos:** `Bovino.java:22-23`, `CrearBovinoRequest.java:13-14`, `CrearBovinoRapidoRequest.java:10-11`
+**¿Fixeado?** No
+
+### Descripción
+
+El spec funcional (CU-02, RN-03) establece que la caravana electrónica son "hasta 15 dígitos". El código solo limita longitud:
+
+```java
+// Bovino.java:22
+@Column(length = 15, nullable = false, unique = true)
+private String caravana;
+```
+
+Y el DTO solo valida `@NotBlank`. Se puede crear un bovino con `caravana="abc"`, `"AR-1234"` o `"   "` (no es blank pero tampoco dígitos).
+
+**Fix:**
+```java
+// CrearBovinoRequest.java + CrearBovinoRapidoRequest.java
+@NotBlank
+@Pattern(regexp = "\\d{1,15}", message = "La caravana debe contener entre 1 y 15 dígitos")
+private String caravana;
+```
+
+Confirmar con producto si la regla es exactamente 15 dígitos o "hasta 15".
+
+---
+
+## BUG-09 — `RegistrarPesajeRequest.peso` es primitivo `double`
+
+**Severidad:** Baja
+**Archivo:** `RegistrarPesajeRequest.java:15-16`
+**¿Fixeado?** No
+
+### Descripción
+
+```java
+@Positive
+private double peso;
+```
+
+Si el cliente omite `peso` en el JSON, Jackson asigna `0.0` por default y `@Positive` rechaza el request con 400 — funciona, pero el mensaje de error confunde ("debe ser positivo" en vez de "es obligatorio"). Tampoco se puede distinguir "no enviado" de "enviado como 0".
+
+**Fix:**
+```java
+@NotNull
+@Positive
+private Double peso;
+```
+
+Adicionalmente, `PesajeServiceImpl.java:21-23` repite la validación que ya hace `@Positive`. Si el service siempre se invoca a través del controller con `@Valid`, la duplicación es defensa en profundidad aceptable. Si se quiere reducir, dejar solo la del DTO.
+
+---
+
+## BUG-10 — Spec técnico tiene una referencia incorrecta a BUG-05
+
+**Severidad:** Baja
+**Archivo:** `docs/technical-spec.md:423`
+**¿Fixeado?** No
+
+### Descripción
+
+> "Los controllers nunca retornan `ResponseEntity.ok().build()` para operaciones sin cuerpo — usan `ResponseEntity.noContent().build()`. Fixea BUG-05 y BUG-06."
+
+BUG-05 era sobre status 201 en creación (no se fixea con `noContent()`). Solo BUG-06 se fixea con `noContent()`.
+
+**Fix:** corregir la oración a "Fixea BUG-06" (y, si se quiere, mencionar el `created()` en la línea inmediatamente anterior como fix de BUG-05).
+
+---
+
+## BUG-11 — `pom.xml` aún incluye Thymeleaf sin uso
+
+**Severidad:** Baja
+**Archivo:** `pom.xml:42-44,75-77`
+**¿Fixeado?** No
+
+### Descripción
+
+El spec técnico (sección 2) marca explícitamente: "Thymeleaf sigue en deps pero sin uso. Candidato a eliminar." Sigue declarado tanto en runtime como en test:
 
 ```xml
-<!-- CORRECTO -->
 <dependency>
     <groupId>org.springframework.boot</groupId>
-    <artifactId>spring-boot-starter-web</artifactId>
+    <artifactId>spring-boot-starter-thymeleaf</artifactId>
 </dependency>
+...
 <dependency>
     <groupId>org.springframework.boot</groupId>
-    <artifactId>spring-boot-starter-test</artifactId>
+    <artifactId>spring-boot-starter-thymeleaf-test</artifactId>
     <scope>test</scope>
 </dependency>
 ```
 
----
+Sin templates Thymeleaf en el proyecto. Aporta peso al JAR y tiempo de arranque sin beneficio.
 
-## BUG-03 — No existe `application.properties`: la app no puede arrancar
-
-**Severidad:** Crítica
-**Archivo:** `src/main/resources/` (ausente)
-**¿Fixeado?** No
-
-### Descripción
-
-No hay ningún archivo de configuración (`application.properties` o `application.yml`) en el proyecto. Sin él, Spring Boot no sabe:
-
-- La URL del datasource SQLite (`spring.datasource.url`)
-- El dialecto de Hibernate para SQLite (`spring.jpa.database-platform`)
-- La estrategia de DDL (`spring.jpa.hibernate.ddl-auto`)
-
-La aplicación lanza `BeanCreationException` al intentar iniciar y no llega a atender ningún request.
-
-```properties
-# Ejemplo mínimo necesario
-spring.datasource.url=jdbc:sqlite:vetrural.db
-spring.datasource.driver-class-name=org.sqlite.JDBC
-spring.jpa.database-platform=org.hibernate.community.dialect.SQLiteDialect
-spring.jpa.hibernate.ddl-auto=update
-```
+**Fix:** eliminar ambas dependencias del `pom.xml`.
 
 ---
 
-## BUG-04 — `EstablecimientoService` accede a colecciones lazy fuera de transacción
-
-**Severidad:** Alta
-**Archivos:** `EstablecimientoService.java:39-55`, `UsuarioService.java:45-47`
-**¿Fixeado?** No
-
-### Descripción
-
-Tres métodos acceden a colecciones `@ManyToMany` (cargadas lazy por defecto) después de que la transacción del `findById` ya se cerró. Esto lanza `LazyInitializationException` cuando `spring.jpa.open-in-view=false`.
-
-```java
-// EstablecimientoService.java:39 — asociarUsuario
-Establecimiento e = obtenerOFallar(idEstablecimiento); // transacción cerrada
-if (!e.getUsuarios().contains(u)) { // <-- LazyInitializationException aquí
-    e.getUsuarios().add(u);
-
-// EstablecimientoService.java:50 — desasociarUsuario
-Establecimiento e = obtenerOFallar(idEstablecimiento);
-e.getUsuarios().removeIf(...)  // <-- LazyInitializationException aquí
-
-// UsuarioService.java:45 — getEstablecimientos
-return obtenerOFallar(idUsuario).getEstablecimientos(); // <-- LazyInitializationException aquí
-```
-
-Solución: agregar `@Transactional` a estos tres métodos.
-
----
-
-## BUG-05 — `BovinoService.crearLote` y `eliminarLote` no son atómicos
-
-**Severidad:** Alta
-**Archivo:** `BovinoService.java:86-103`
-**¿Fixeado?** No
-
-### Descripción
-
-Ambos métodos iteran sobre bovinos y ejecutan un `save` por cada uno en una transacción separada (la propia del repositorio). Si el proceso falla en la iteración número N, los primeros N-1 bovinos ya fueron persistidos. El lote queda asignado o eliminado parcialmente sin posibilidad de rollback.
-
-```java
-// ACTUAL — cada save es una transacción independiente
-public void crearLote(String nombre, List<String> idBovinos) {
-    idBovinos.forEach(id -> bovinoRepository.findById(id).ifPresent(b -> {
-        b.setLote(nombre);
-        bovinoRepository.save(b); // commit parcial
-    }));
-}
-```
-
-Solución: anotar ambos métodos con `@Transactional`.
-
----
-
-## BUG-06 — Todos los endpoints de creación retornan HTTP 200 en vez de 201
-
-**Severidad:** Media
-**Archivos:** `BovinoController.java`, `EstablecimientoController.java`, `UsuarioController.java`
-**¿Fixeado?** No
-
-### Descripción
-
-Los endpoints `POST` que crean recursos usan `ResponseEntity.ok()` (HTTP 200). El estándar REST especifica que la creación de un recurso debe responder con HTTP 201 Created e idealmente incluir el header `Location` apuntando al recurso creado. Cualquier cliente REST convencional que dependa del código de respuesta para saber si se creó o ya existía recibirá información incorrecta.
-
-```java
-// ACTUAL — incorrecto
-return ResponseEntity.ok(BovinoMapper.toResponse(bovino));
-
-// CORRECTO
-URI location = URI.create("/api/bovinos/" + bovino.getIdAnimal());
-return ResponseEntity.created(location).body(BovinoMapper.toResponse(bovino));
-```
-
-Afecta: `POST /api/bovinos`, `POST /api/bovinos/rapido`, `POST /api/establecimientos`, `POST /api/usuarios`.
-
----
-
-## BUG-07 — Endpoint `DELETE /api/bovinos/{id}` no existe aunque el servicio sí lo implementa
-
-**Severidad:** Media
-**Archivo:** `BovinoController.java` (ausencia), `BovinoService.java:48`
-**¿Fixeado?** No
-
-### Descripción
-
-`BovinoService.eliminarBovino(String id)` está implementado pero ningún endpoint del controller lo expone. Un bovino creado no puede ser eliminado por la API.
-
-```java
-// BovinoService.java:48 — existe pero es inalcanzable desde HTTP
-public void eliminarBovino(String id) {
-    bovinoRepository.deleteById(id);
-}
-```
-
----
-
-## BUG-08 — `POST /api/manga/tacto` acepta `situacion = Preñada` con `periodo = null`
-
-**Severidad:** Media
-**Archivo:** `RegistrarTactoRequest.java`, `TactoService.java:21`
-**¿Fixeado?** No
-
-### Descripción
-
-Desde el punto de vista veterinario, si una vaca es diagnosticada como `Preñada`, el campo `periodo` (trimestre de gestación) es obligatorio. Sin embargo, `periodo` en el DTO y en la entidad no tiene restricción `nullable = false` ni validación condicional. Se puede registrar un tacto `Preñada` con `periodo = null`, generando datos de gestión incompletos.
-
-```java
-// Tacto.java:18 — nullable implícito
-@Enumerated(EnumType.STRING)
-private PeriodoEnum periodo; // sin @Column(nullable = false)
-
-// No existe lógica en TactoService que valide periodo != null cuando situacion == Preñada
-```
-
----
-
-## BUG-09 — `Bovino.idAnimal` acepta IDs de más de 15 caracteres sin validación temprana
-
-**Severidad:** Media
-**Archivos:** `Bovino.java:19`, `CrearBovinoRequest.java`, `CrearBovinoRapidoRequest.java`
-**¿Fixeado?** No
-
-### Descripción
-
-La entidad declara `@Column(length = 15)` para `idAnimal` (caravana electrónica de hasta 15 dígitos). Sin embargo, los DTOs de creación no tienen `@Size(max = 15)` ni ninguna otra validación. Si se envía un ID de 16+ caracteres, el error ocurre en la capa de base de datos y retorna un 500 en vez de un 400 descriptivo.
-
-```java
-// Bovino.java:19
-@Column(length = 15, nullable = false, unique = true)
-private String idAnimal;
-
-// CrearBovinoRequest.java — sin validación
-private String id; // podría ser "1234567890123456" (16 chars) → 500
-```
-
----
-
-## BUG-10 — `SituacionEnum` contiene caracteres no-ASCII en los nombres de constantes
-
-**Severidad:** Media
-**Archivo:** `SituacionEnum.java`
-**¿Fixeado?** No
-
-### Descripción
-
-Dos constantes del enum usan caracteres especiales del español:
-
-```java
-public enum SituacionEnum {
-    Preñada,      // 'ñ'
-    Frigorífico,  // 'í'
-    ...
-}
-```
-
-Jackson serializa el enum usando `Enum.name()`, que incluye los caracteres especiales. El `pom.xml` no declara `<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>`, por lo que Maven puede compilar el archivo con la codificación del sistema operativo (en Windows: Cp1252). Si hay discrepancia de encoding entre compilación y runtime, `Enum.valueOf("Frigorífico")` nunca matchea con la constante interna, lanzando `IllegalArgumentException` (500 → 400 vía handler). También genera problemas en clientes que no esperan caracteres Unicode en nombres de enum.
-
----
-
-## BUG-11 — `GlobalExceptionHandler` no captura errores de deserialización Jackson
-
-**Severidad:** Media
-**Archivo:** `GlobalExceptionHandler.java`
-**¿Fixeado?** No
-
-### Descripción
-
-Si un cliente envía un valor de enum inválido (ej. `"situacion": "INVALIDA"`), Jackson lanza `HttpMessageNotReadableException`, que no está registrada en el `GlobalExceptionHandler`. Spring Boot devuelve su respuesta de error por defecto (con formato diferente al definido en el handler), rompiendo la consistencia de la API.
-
-```java
-// GlobalExceptionHandler.java — falta este handler
-@ExceptionHandler(HttpMessageNotReadableException.class)
-public ResponseEntity<Map<String, String>> handleBadJson(HttpMessageNotReadableException ex) {
-    return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-            .body(Map.of("error", "Valor inválido en el cuerpo del request: " + ex.getMessage()));
-}
-```
-
----
-
-## BUG-12 — `EventoSanitarioMapper` usa `getClass().getSimpleName()` — riesgo con proxies Hibernate
+## BUG-12 — `SecurityConfig` tiene nombre engañoso
 
 **Severidad:** Baja
-**Archivo:** `EventoSanitarioMapper.java:13`
+**Archivo:** `config/SecurityConfig.java`
 **¿Fixeado?** No
 
 ### Descripción
 
-```java
-e.getClass().getSimpleName()
-```
+La clase se llama `SecurityConfig` pero solo expone un `PasswordEncoder`. No hay nada de Spring Security configurado (no hay filter chain, no hay autorización, no hay autenticación). Quien busque la configuración de seguridad por el nombre va a creer que está y no lo está.
 
-Con `InheritanceType.JOINED`, Hibernate generalmente instancia las subclases correctamente. Sin embargo, si en algún contexto Hibernate envuelve la entidad en un proxy de instrumentación (ej. `Tacto$HibernateProxy$...`), `getSimpleName()` devuelve el nombre de la clase proxy en vez de `"Tacto"`. El campo `tipo` del response llegaría al cliente con un valor como `"Tacto$HibernateProxy$a1b2c3"`.
+**Fix:** renombrar a `PasswordEncoderConfig` (o `CryptoConfig`). Cuando se incorpore Spring Security completo, crear un `SecurityConfig` nuevo con el filter chain real.
 
 ---
 
-## BUG-13 — `EstablecimientoResponse` omite la lista de usuarios asociados
+## BUG-13 — Listados sin paginación
 
 **Severidad:** Baja
-**Archivos:** `EstablecimientoMapper.java`, `EstablecimientoResponse.java`
+**Archivos:** `BovinoServiceImpl.java:93-95,98-100,103-106`, `BovinoController.java:23-28,90-95`, `EstablecimientoController.java:50-55`
 **¿Fixeado?** No
 
 ### Descripción
 
-`EstablecimientoMapper.toResponse` solo mapea `id` y `nombre`. Tras llamar a `POST /api/establecimientos/{id}/usuarios/{usuarioId}` para asociar un usuario, no hay forma de verificar la asociación mediante la respuesta del establecimiento. La información de usuarios siempre llega vacía en la respuesta.
+`GET /api/bovinos`, `GET /api/bovinos/lotes/{lote}` y `GET /api/establecimientos/{id}/bovinos` retornan `findAll` / `findByX` completos. Para un establecimiento con miles de animales, la respuesta carga toda la tabla en memoria, la serializa entera y la manda en una sola respuesta HTTP.
+
+El spec técnico menciona el caso ("miles de animales") en TD-08 como justificación para evitar `@OneToMany` en `Establecimiento`, pero los listados planos del controller quedan con el mismo riesgo.
+
+**Fix:** incorporar `Pageable` en los métodos de service y controller, retornar `Page<BovinoResponse>`. Aplicar al menos a los endpoints de listado por establecimiento y por lote.
 
 ---
 
-## BUG-14 — Contraseñas almacenadas en texto plano
+## BUG-14 — `@ManyToOne` con fetch EAGER por default
 
-**Severidad:** Baja (seguridad)
-**Archivos:** `UsuarioService.java:24`, `Usuario.java`
+**Severidad:** Baja
+**Archivos:** `Bovino.java:25-27`, `EventoSanitario.java:23-29`
 **¿Fixeado?** No
 
 ### Descripción
 
-El campo `contrasena` se persiste directamente en la base de datos sin ningún tipo de hash. Cualquier acceso al archivo SQLite expone todas las contraseñas en claro.
+Todas las asociaciones `@ManyToOne` están con fetch EAGER (default de JPA). Al listar bovinos o eventos hay joins implícitos que cargan `Establecimiento`, `Bovino` y `Usuario` aunque los mappers solo usen `getId()`:
 
 ```java
-// UsuarioService.java:24 — sin hashing
-u.setContrasena(contrasena);
+// BovinoMapper.java:14
+b.getEstablecimiento() != null ? b.getEstablecimiento().getId() : null
+
+// TactoMapper.java:14-15
+t.getBovino().getId(),
+t.getRegistradoPor().getIdUsuario(),
 ```
+
+Con LAZY + acceso a la PK, Hibernate puede evitar el join (solo necesita el FK que ya tiene cargado en la entidad hija).
+
+**Fix:**
+```java
+@ManyToOne(optional = false, fetch = FetchType.LAZY)
+@JoinColumn(name = "establecimiento_id", nullable = false)
+private Establecimiento establecimiento;
+```
+
+Aplicar a `Bovino.establecimiento`, `EventoSanitario.bovino`, `EventoSanitario.registradoPor`.
 
 ---
 
@@ -311,17 +377,17 @@ u.setContrasena(contrasena);
 
 | ID | Componente afectado | Severidad | ¿Fixeado? |
 |---|---|---|---|
-| BUG-01 | `pom.xml` — Spring Boot 4.0.6 inexistente | Crítica | ❌ No |
-| BUG-02 | `pom.xml` — dependencias test inexistentes | Crítica | ❌ No |
-| BUG-03 | `application.properties` ausente | Crítica | ❌ No |
-| BUG-04 | `EstablecimientoService` / `UsuarioService` — lazy loading sin `@Transactional` | Alta | ❌ No |
-| BUG-05 | `BovinoService.crearLote` / `eliminarLote` — operaciones no atómicas | Alta | ❌ No |
-| BUG-06 | Todos los POST retornan HTTP 200 en vez de 201 | Media | ❌ No |
-| BUG-07 | `DELETE /api/bovinos/{id}` no expuesto en controller | Media | ❌ No |
-| BUG-08 | Tacto `Preñada` acepta `periodo = null` | Media | ❌ No |
-| BUG-09 | `Bovino.idAnimal` sin validación de longitud en DTO | Media | ❌ No |
-| BUG-10 | `SituacionEnum` con caracteres no-ASCII (`ñ`, `í`) | Media | ❌ No |
-| BUG-11 | `GlobalExceptionHandler` no captura `HttpMessageNotReadableException` | Media | ❌ No |
-| BUG-12 | `EventoSanitarioMapper` usa `getSimpleName()` — riesgo proxy Hibernate | Baja | ❌ No |
-| BUG-13 | `EstablecimientoResponse` omite usuarios | Baja | ❌ No |
-| BUG-14 | Contraseñas en texto plano | Baja | ❌ No |
+| BUG-01 | `Usuario.email` sin `unique=true` en DB | Alta | ❌ No |
+| BUG-02 | `Tacto` sin validación de coherencia situacion/periodo | Alta | ❌ No |
+| BUG-03 | Borrar `Usuario`/`Bovino` con asociaciones → 500 por FK | Alta | ❌ No |
+| BUG-04 | `@RequestParam` de lote/observaciones sin `@NotBlank` | Media | ❌ No |
+| BUG-05 | `functional-spec.md` describe entidades eliminadas | Media | ❌ No |
+| BUG-06 | Lotes globales en vez de scoped por establecimiento | Media | ❌ No |
+| BUG-07 | `Location` headers en `MangaController` inestables | Media | ❌ No |
+| BUG-08 | `caravana` no se valida como dígitos | Media | ❌ No |
+| BUG-09 | `RegistrarPesajeRequest.peso` es primitivo `double` | Baja | ❌ No |
+| BUG-10 | Spec técnico referencia incorrecta a BUG-05 | Baja | ❌ No |
+| BUG-11 | `pom.xml` incluye Thymeleaf sin uso | Baja | ❌ No |
+| BUG-12 | `SecurityConfig` nombre engañoso | Baja | ❌ No |
+| BUG-13 | Listados sin paginación | Baja | ❌ No |
+| BUG-14 | `@ManyToOne` con fetch EAGER por default | Baja | ❌ No |

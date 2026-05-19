@@ -1,5 +1,6 @@
 package vetrural.mvc.controller;
 
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -10,6 +11,7 @@ import vetrural.mvc.entity.Usuario;
 import vetrural.mvc.mapper.EstablecimientoMapper;
 import vetrural.mvc.mapper.UsuarioMapper;
 import vetrural.mvc.service.UsuarioService;
+import java.net.URI;
 import java.util.List;
 
 @RestController
@@ -35,9 +37,10 @@ public class UsuarioController {
     }
 
     @PostMapping
-    public ResponseEntity<UsuarioResponse> crear(@RequestBody CrearUsuarioRequest req) {
+    public ResponseEntity<UsuarioResponse> crear(@Valid @RequestBody CrearUsuarioRequest req) {
         Usuario u = usuarioService.crear(req.getNombre(), req.getApellido(), req.getEmail(), req.getContrasena(), req.getTipo());
-        return ResponseEntity.ok(UsuarioMapper.toResponse(u));
+        URI location = URI.create("/api/usuarios/" + u.getIdUsuario());
+        return ResponseEntity.created(location).body(UsuarioMapper.toResponse(u));
     }
 
     @DeleteMapping("/{id}")

@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
 public class TactoResponse {
     private Long id;
     private LocalDateTime fechaHora;
-    private String bovinoId;
+    private Long bovinoId;
     private Long registradoPorId;
     private SituacionEnum situacion;
     private PeriodoEnum periodo;

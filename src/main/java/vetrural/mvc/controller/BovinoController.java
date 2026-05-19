@@ -1,5 +1,6 @@
 package vetrural.mvc.controller;
 
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -9,6 +10,7 @@ import vetrural.mvc.dto.response.BovinoResponse;
 import vetrural.mvc.entity.Bovino;
 import vetrural.mvc.mapper.BovinoMapper;
 import vetrural.mvc.service.BovinoService;
+import java.net.URI;
 import java.util.List;
 
 @RestController
@@ -26,17 +28,30 @@ public class BovinoController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<BovinoResponse> getBovino(@PathVariable String id) {
+    public ResponseEntity<BovinoResponse> getBovino(@PathVariable Long id) {
         return bovinoService.getBovino(id)
                 .map(BovinoMapper::toResponse)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
+    @GetMapping("/buscar")
+    public ResponseEntity<BovinoResponse> buscarPorCaravana(@RequestParam String caravana) {
+        return bovinoService.getBovinoPorCaravana(caravana)
+                .map(BovinoMapper::toResponse)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @GetMapping("/existe")
+    public boolean existePorCaravana(@RequestParam String caravana) {
+        return bovinoService.existePorCaravana(caravana);
+    }
+
     @PostMapping
-    public ResponseEntity<BovinoResponse> crear(@RequestBody CrearBovinoRequest req) {
+    public ResponseEntity<BovinoResponse> crear(@Valid @RequestBody CrearBovinoRequest req) {
         Bovino bovino = bovinoService.crearBovino(
-                req.getId(),
+                req.getCaravana(),
                 req.getEstablecimientoId(),
                 req.getNacimiento(),
                 req.getSexo(),
@@ -44,30 +59,27 @@ public class BovinoController {
                 req.getRaza(),
                 req.getTipo()
         );
-        return ResponseEntity.ok(BovinoMapper.toResponse(bovino));
+        URI location = URI.create("/api/bovinos/" + bovino.getId());
+        return ResponseEntity.created(location).body(BovinoMapper.toResponse(bovino));
     }
 
     @PostMapping("/rapido")
-    public ResponseEntity<BovinoResponse> crearRapido(@RequestBody CrearBovinoRapidoRequest req) {
-        Bovino bovino = bovinoService.crearBovinoRapido(req.getId(), req.getEstablecimientoId(), req.getSexo());
-        return ResponseEntity.ok(BovinoMapper.toResponse(bovino));
+    public ResponseEntity<BovinoResponse> crearRapido(@Valid @RequestBody CrearBovinoRapidoRequest req) {
+        Bovino bovino = bovinoService.crearBovinoRapido(req.getCaravana(), req.getEstablecimientoId(), req.getSexo());
+        URI location = URI.create("/api/bovinos/" + bovino.getId());
+        return ResponseEntity.created(location).body(BovinoMapper.toResponse(bovino));
     }
 
     @PutMapping("/{id}/observaciones")
-    public ResponseEntity<BovinoResponse> actualizarObs(@PathVariable String id, @RequestParam String obs) {
+    public ResponseEntity<BovinoResponse> actualizarObs(@PathVariable Long id, @RequestParam String obs) {
         Bovino bovino = bovinoService.actualizarObservaciones(id, obs);
         return ResponseEntity.ok(BovinoMapper.toResponse(bovino));
     }
 
     @PutMapping("/{id}/lote")
-    public ResponseEntity<Void> asignarLote(@PathVariable String id, @RequestParam String lote) {
+    public ResponseEntity<Void> asignarLote(@PathVariable Long id, @RequestParam String lote) {
         bovinoService.anadirBovinoALote(id, lote);
-        return ResponseEntity.ok().build();
-    }
-
-    @GetMapping("/{id}/existe")
-    public boolean existeBovino(@PathVariable String id) {
-        return bovinoService.existeBovino(id);
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/lotes")
@@ -83,14 +95,15 @@ public class BovinoController {
     }
 
     @PostMapping("/lotes")
-    public ResponseEntity<Void> crearLote(@RequestParam String nombre, @RequestBody List<String> idBovinos) {
+    public ResponseEntity<Void> crearLote(@RequestParam String nombre, @RequestBody List<Long> idBovinos) {
         bovinoService.crearLote(nombre, idBovinos);
-        return ResponseEntity.ok().build();
+        URI location = URI.create("/api/bovinos/lotes/" + nombre);
+        return ResponseEntity.created(location).build();
     }
 
     @DeleteMapping("/lotes")
     public ResponseEntity<Void> eliminarLote(@RequestParam String nombre) {
         bovinoService.eliminarLote(nombre);
-        return ResponseEntity.ok().build();
+        return ResponseEntity.noContent().build();
     }
 }

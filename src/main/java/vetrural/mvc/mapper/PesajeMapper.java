@@ -11,7 +11,7 @@ public final class PesajeMapper {
         return new PesajeResponse(
                 p.getId(),
                 p.getFechaHora(),
-                p.getBovino().getIdAnimal(),
+                p.getBovino().getId(),
                 p.getRegistradoPor().getIdUsuario(),
                 p.getPeso()
         );

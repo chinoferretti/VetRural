@@ -1,5 +1,6 @@
 package vetrural.mvc.mapper;
 
+import org.hibernate.Hibernate;
 import vetrural.mvc.dto.response.EventoSanitarioResponse;
 import vetrural.mvc.entity.EventoSanitario;
 
@@ -10,9 +11,9 @@ public final class EventoSanitarioMapper {
     public static EventoSanitarioResponse toResponse(EventoSanitario e) {
         return new EventoSanitarioResponse(
                 e.getId(),
-                e.getClass().getSimpleName(),
+                Hibernate.getClass(e).getSimpleName(),
                 e.getFechaHora(),
-                e.getBovino().getIdAnimal(),
+                e.getBovino().getId(),
                 e.getRegistradoPor().getIdUsuario()
         );
     }
