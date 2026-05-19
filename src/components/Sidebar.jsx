@@ -1,7 +1,6 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
-// Funcionalidades compartidas por todos los roles
 const NAV_BASE = [
   { to: '/dashboard', label: 'Dashboard',        icon: '🏠' },
   { to: '/animales',  label: 'Animales',          icon: '🐄' },
@@ -11,10 +10,8 @@ const NAV_BASE = [
   { to: '/partes',    label: 'Partes Sanitarios', icon: '📄' },
 ];
 
-// Exclusivas del Productor
-const NAV_PRODUCTOR = [
-  { to: '/miembros', label: 'Gestionar campo', icon: '🏡' },
-];
+const NAV_PRODUCTOR   = [{ to: '/miembros',     label: 'Gestionar campo', icon: '🏡' }];
+const NAV_NO_PRODUCTOR = [{ to: '/invitaciones', label: 'Invitaciones',   icon: '📬' }];
 
 const ROL_LABEL = {
   veterinario: 'Veterinario',
@@ -31,11 +28,8 @@ export default function Sidebar({ open, onClose }) {
   const { usuario, logout } = useAuth();
   const navigate = useNavigate();
 
-  const navLinks = [
-    ...NAV_BASE,
-    ...(usuario?.rol === 'productor' ? NAV_PRODUCTOR : []),
-  ];
-
+  const extra = usuario?.rol === 'productor' ? NAV_PRODUCTOR : NAV_NO_PRODUCTOR;
+  const navLinks = [...NAV_BASE, ...extra];
   const plan = PLAN_COLOR[usuario?.plan] ?? PLAN_COLOR.Básico;
 
   const handleLogout = () => { logout(); navigate('/login'); };

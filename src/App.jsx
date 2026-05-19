@@ -5,6 +5,7 @@ import PrivateRoute from './components/PrivateRoute';
 import Layout from './components/Layout';
 
 import Login          from './pages/Login';
+import Registro       from './pages/Registro';
 import Dashboard      from './pages/Dashboard';
 import Animales       from './pages/Animales';
 import NuevoAnimal    from './pages/NuevoAnimal';
@@ -18,6 +19,7 @@ import Historial      from './pages/Historial';
 import Metricas       from './pages/Metricas';
 import Partes         from './pages/Partes';
 import Miembros       from './pages/Miembros';
+import Invitaciones   from './pages/Invitaciones';
 
 const TODOS = ['veterinario', 'productor', 'otros'];
 
@@ -27,7 +29,8 @@ export default function App() {
       <EstablecimientoProvider>
         <BrowserRouter>
           <Routes>
-            <Route path="/login" element={<Login />} />
+            <Route path="/login"    element={<Login />} />
+            <Route path="/registro" element={<Registro />} />
 
             {/* ── Funcionalidades compartidas por los 3 roles ── */}
             <Route element={<PrivateRoute roles={TODOS} />}>
@@ -51,6 +54,13 @@ export default function App() {
             <Route element={<PrivateRoute roles={['productor']} />}>
               <Route element={<Layout />}>
                 <Route path="/miembros" element={<Miembros />} />
+              </Route>
+            </Route>
+
+            {/* ── Invitaciones: veterinario y otros ── */}
+            <Route element={<PrivateRoute roles={['veterinario', 'otros']} />}>
+              <Route element={<Layout />}>
+                <Route path="/invitaciones" element={<Invitaciones />} />
               </Route>
             </Route>
 

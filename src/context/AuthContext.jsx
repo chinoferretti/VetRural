@@ -2,37 +2,17 @@ import { createContext, useContext, useState, useEffect } from 'react';
 
 const AuthContext = createContext(null);
 
-// Roles del sistema:
-//  veterinario — profesional con matrícula, puede ser asignado a sesiones
-//  productor   — dueño de establecimiento, gestiona miembros e invitaciones
-//  otros       — peón u otro trabajador, acceso completo de solo-lectura/trabajo
+const DEMO_IDS = new Set([1, 2, 3]);
+
 const USUARIOS_MOCK = [
-  {
-    id: 1,
-    nombre: 'Dr. Carlos Ramírez',
-    email: 'vet@vetrural.com',
-    password: '1234',
-    rol: 'veterinario',
-    matricula: 'MV-12345',
-    plan: 'Pro',
-  },
-  {
-    id: 2,
-    nombre: 'Juan Pereyra',
-    email: 'productor@campo.com',
-    password: '1234',
-    rol: 'productor',
-    plan: 'Básico',
-  },
-  {
-    id: 3,
-    nombre: 'Pedro Martínez',
-    email: 'peon@campo.com',
-    password: '1234',
-    rol: 'otros',
-    plan: 'Básico',
-  },
+  { id: 1, nombre: 'Dr. Carlos Ramírez', email: 'vet@vetrural.com',       password: '1234', rol: 'veterinario', matricula: 'MV-12345', plan: 'Pro' },
+  { id: 2, nombre: 'Juan Pereyra',       email: 'productor@campo.com',    password: '1234', rol: 'productor',   plan: 'Básico' },
+  { id: 3, nombre: 'Pedro Martínez',     email: 'peon@campo.com',         password: '1234', rol: 'otros',       plan: 'Básico' },
 ];
+
+function getRegistrados() {
+  try { return JSON.parse(localStorage.getItem('vetrural_usuarios_registrados') || '[]'); } catch { return []; }
+}
 
 export function AuthProvider({ children }) {
   const [usuario, setUsuario] = useState(null);
@@ -45,7 +25,8 @@ export function AuthProvider({ children }) {
   }, []);
 
   const login = (email, password) => {
-    const found = USUARIOS_MOCK.find(u => u.email === email && u.password === password);
+    const todos = [...USUARIOS_MOCK, ...getRegistrados()];
+    const found = todos.find(u => u.email === email && u.password === password);
     if (!found) throw new Error('Credenciales incorrectas');
     const { password: _, ...userData } = found;
     setUsuario(userData);
@@ -54,16 +35,32 @@ export function AuthProvider({ children }) {
     return userData;
   };
 
+  const registrar = ({ nombre, apellido, email, password, rol }) => {
+    const todos = [...USUARIOS_MOCK, ...getRegistrados()];
+    if (todos.find(u => u.email === email)) throw new Error('El email ya está registrado');
+    const nuevo = {
+      id: Date.now(),
+      nombre: `${nombre} ${apellido}`.trim(),
+      email,
+      password,
+      rol,
+      plan: 'Básico',
+    };
+    localStorage.setItem('vetrural_usuarios_registrados', JSON.stringify([...getRegistrados(), nuevo]));
+    return nuevo;
+  };
+
   const logout = () => {
     setUsuario(null);
     localStorage.removeItem('vetrural_usuario');
     localStorage.removeItem('vetrural_token');
   };
 
-  const tieneRol = (...roles) => usuario && roles.includes(usuario.rol);
+  const tieneRol   = (...roles) => usuario && roles.includes(usuario.rol);
+  const esDemoUser = () => usuario && DEMO_IDS.has(usuario.id);
 
   return (
-    <AuthContext.Provider value={{ usuario, login, logout, cargando, tieneRol }}>
+    <AuthContext.Provider value={{ usuario, login, registrar, logout, cargando, tieneRol, esDemoUser }}>
       {children}
     </AuthContext.Provider>
   );

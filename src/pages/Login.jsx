@@ -1,16 +1,18 @@
 import { useState } from 'react';
-import { useNavigate, Navigate } from 'react-router-dom';
+import { useNavigate, Navigate, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 export default function Login() {
   const { login, usuario } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const registrado = location.state?.registrado;
   const [form, setForm] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
   const [cargando, setCargando] = useState(false);
 
   if (usuario) {
-    return <Navigate to={usuario.rol === 'productor' ? '/productor' : '/dashboard'} replace />;
+    return <Navigate to="/dashboard" replace />;
   }
 
   const handleSubmit = async (e) => {
@@ -18,8 +20,8 @@ export default function Login() {
     setError('');
     setCargando(true);
     try {
-      const user = login(form.email, form.password);
-      navigate(user.rol === 'productor' ? '/productor' : '/dashboard', { replace: true });
+      login(form.email, form.password);
+      navigate('/dashboard', { replace: true });
     } catch {
       setError('Email o contraseña incorrectos');
     } finally {
@@ -54,6 +56,12 @@ export default function Login() {
       {/* Card */}
       <div className="relative z-10 w-full bg-white rounded-2xl" style={{ maxWidth: '360px', padding: '1.5rem' }}>
         <h2 className="text-lg font-bold mb-4" style={{ color: 'var(--verde-oscuro)' }}>Iniciar sesión</h2>
+
+        {registrado && (
+          <div className="mb-4 p-3 rounded-xl text-sm" style={{ backgroundColor: '#D1FAE5', color: '#065F46' }}>
+            Cuenta creada con éxito. Podés iniciar sesión.
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="flex flex-col" style={{ gap: '1rem' }}>
           <div>
@@ -97,14 +105,24 @@ export default function Login() {
           </button>
         </form>
 
+        {/* Registro */}
+        <div className="mt-4 text-center">
+          <p className="text-sm" style={{ color: '#6B7280' }}>
+            ¿No tenés cuenta?{' '}
+            <Link to="/registro" className="font-semibold" style={{ color: 'var(--verde-medio)' }}>
+              Registrate
+            </Link>
+          </p>
+        </div>
+
         {/* Demo */}
         <div className="mt-5 pt-4 border-t" style={{ borderColor: '#F3F4F6' }}>
           <p className="text-xs font-medium mb-2" style={{ color: '#9CA3AF' }}>Acceso rápido (demo):</p>
           <div className="flex flex-wrap gap-2">
             {[
-              { label: 'Veterinario', email: 'vet@vetrural.com' },
-              { label: 'Productor',   email: 'productor@campo.com' },
-              { label: 'Admin',       email: 'admin@vetrural.com' },
+              { label: 'Veterinario', email: 'vet@vetrural.com'      },
+              { label: 'Productor',   email: 'productor@campo.com'   },
+              { label: 'Otros',       email: 'peon@campo.com'        },
             ].map(({ label, email }) => (
               <button
                 key={email}
