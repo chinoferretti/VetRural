@@ -1,4 +1,4 @@
-package vetrural.mvc.service;
+package vetrural.mvc.service.Impl;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -16,6 +16,8 @@ import vetrural.mvc.enumerations.PeriodoEnum;
 import vetrural.mvc.enumerations.SituacionEnum;
 import vetrural.mvc.enumerations.VacunaTipoEnum;
 import vetrural.mvc.repository.EventoSanitarioRepository;
+import vetrural.mvc.service.*;
+
 import java.util.List;
 import java.util.Optional;
 

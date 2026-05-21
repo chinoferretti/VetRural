@@ -1,4 +1,4 @@
-package vetrural.mvc.service;
+package vetrural.mvc.service.Impl;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -7,6 +7,8 @@ import vetrural.mvc.entity.Usuario;
 import vetrural.mvc.entity.Vacunacion;
 import vetrural.mvc.enumerations.VacunaTipoEnum;
 import vetrural.mvc.repository.VacunacionRepository;
+import vetrural.mvc.service.VacunacionService;
+
 import java.time.LocalDateTime;
 import java.util.List;
 

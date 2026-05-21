@@ -1,5 +1,6 @@
 package vetrural.mvc.service;
 
+import vetrural.mvc.dto.response.HistorialBovinoResponse;
 import vetrural.mvc.entity.Bovino;
 import vetrural.mvc.enumerations.RazaBovinoEnum;
 import vetrural.mvc.enumerations.SexoEnum;
@@ -26,4 +27,5 @@ public interface BovinoService {
     void anadirBovinoALote(Long idBovino, String nombreLote);
     void eliminarLote(String nombreLote);
     Bovino actualizarObservaciones(Long idBovino, String obs);
+    HistorialBovinoResponse getHistorial(String caravana);
 }

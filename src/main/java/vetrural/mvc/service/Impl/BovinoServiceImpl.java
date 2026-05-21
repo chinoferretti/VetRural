@@ -1,15 +1,22 @@
-package vetrural.mvc.service;
+package vetrural.mvc.service.Impl;
 
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import vetrural.mvc.entity.Bovino;
-import vetrural.mvc.entity.Establecimiento;
+import vetrural.mvc.dto.response.*;
+import vetrural.mvc.entity.*;
 import vetrural.mvc.enumerations.RazaBovinoEnum;
 import vetrural.mvc.enumerations.SexoEnum;
 import vetrural.mvc.enumerations.TipoBovinoEnum;
+import vetrural.mvc.mapper.BoqueoMapper;
+import vetrural.mvc.mapper.BovinoMapper;
+import vetrural.mvc.mapper.PesajeMapper;
+import vetrural.mvc.mapper.TactoMapper;
+import vetrural.mvc.mapper.VacunacionMapper;
 import vetrural.mvc.repository.BovinoRepository;
+import vetrural.mvc.service.*;
+
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -23,6 +30,18 @@ public class BovinoServiceImpl implements BovinoService {
 
     @Autowired
     private EstablecimientoService establecimientoService;
+
+    @Autowired
+    private PesajeService pesajeService;
+
+    @Autowired
+    private TactoService tactoService;
+
+    @Autowired
+    private VacunacionService vacunacionService;
+
+    @Autowired
+    private BoqueoService boqueoService;
 
     @Override
     public Bovino crearBovino(String caravana, Long establecimientoId, LocalDate nacimiento, SexoEnum sexo, String obs, RazaBovinoEnum raza, TipoBovinoEnum tipo) {
@@ -163,5 +182,24 @@ public class BovinoServiceImpl implements BovinoService {
         Bovino bovino = obtenerOFallar(idBovino);
         bovino.setObservaciones(obs);
         return bovinoRepository.save(bovino);
+    }
+
+    @Override
+    public HistorialBovinoResponse getHistorial(String caravana) {
+        Bovino bovino = bovinoRepository.findByCaravana(caravana)
+                .orElseThrow(() -> new EntityNotFoundException("Bovino no encontrado: " + caravana));
+        BoqueoResponse boqueo = boqueoService.getUltimoBoqueo(bovino)
+                .map(BoqueoMapper::toResponse)
+                .orElse(null);
+        TactoResponse tacto = tactoService.getUltimoTacto(bovino)
+                .map(TactoMapper::toResponse)
+                .orElse(null);
+        PesajeResponse pesaje = pesajeService.getUltimoPesaje(bovino)
+                .map(PesajeMapper::toResponse)
+                .orElse(null);
+        List<VacunacionResponse> vacunaciones = vacunacionService.getVacunacionesPorBovino(bovino).stream()
+                .map(VacunacionMapper::toResponse)
+                .toList();
+        return new HistorialBovinoResponse(BovinoMapper.toResponse(bovino), boqueo, pesaje, tacto, vacunaciones);
     }
 }
