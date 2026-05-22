@@ -1,0 +1,56 @@
+{
+  "resumen": {
+    "totalAnimales": 142,
+    "alertas": 4,
+    "criticos": 1,
+    "vacunados": 128,
+    "porcentajePreniez": 68,
+    "visitasEstesMes": 3
+  },
+  "preñez": [
+    { "mes": "Ene", "porcentaje": 62 },
+    { "mes": "Feb", "porcentaje": 64 },
+    { "mes": "Mar", "porcentaje": 67 },
+    { "mes": "Abr", "porcentaje": 65 },
+    { "mes": "May", "porcentaje": 70 },
+    { "mes": "Jun", "porcentaje": 68 },
+    { "mes": "Jul", "porcentaje": 71 },
+    { "mes": "Ago", "porcentaje": 73 },
+    { "mes": "Sep", "porcentaje": 69 },
+    { "mes": "Oct", "porcentaje": 68 },
+    { "mes": "Nov", "porcentaje": 66 },
+    { "mes": "Dic", "porcentaje": 68 }
+  ],
+  "vacunaciones": [
+    { "vacuna": "Aftosa", "cantidad": 128 },
+    { "vacuna": "Brucelosis", "cantidad": 95 },
+    { "vacuna": "Clostridium", "cantidad": 110 },
+    { "vacuna": "IBR", "cantidad": 72 },
+    { "vacuna": "DVB", "cantidad": 60 }
+  ],
+  "estadoSanitario": [
+    { "estado": "Sano", "cantidad": 128, "color": "#52B788" },
+    { "estado": "Alerta", "cantidad": 10, "color": "#F59E0B" },
+    { "estado": "Crítico", "cantidad": 4, "color": "#EF4444" }
+  ],
+  "pesoPromedio": [
+    { "mes": "Ene", "peso": 390 },
+    { "mes": "Feb", "peso": 395 },
+    { "mes": "Mar", "peso": 402 },
+    { "mes": "Abr", "peso": 408 },
+    { "mes": "May", "peso": 415 },
+    { "mes": "Jun", "peso": 420 },
+    { "mes": "Jul", "peso": 418 },
+    { "mes": "Ago", "peso": 425 },
+    { "mes": "Sep", "peso": 430 },
+    { "mes": "Oct", "peso": 428 },
+    { "mes": "Nov", "peso": 432 },
+    { "mes": "Dic", "peso": 435 }
+  ],
+  "alertas": [
+    { "id": 1, "animal": "ARG-004 Rubia", "tipo": "critico", "mensaje": "Fiebre alta - antibioticoterapia en curso" },
+    { "id": 2, "animal": "ARG-002 Negra", "tipo": "alerta", "mensaje": "Cojera leve - seguimiento pendiente" },
+    { "id": 3, "animal": "ARG-021 Mora", "tipo": "alerta", "mensaje": "Vacuna Aftosa vencida hace 15 días" },
+    { "id": 4, "animal": "ARG-087 Flaca", "tipo": "alerta", "mensaje": "Pérdida de peso superior al 10%" }
+  ]
+}
