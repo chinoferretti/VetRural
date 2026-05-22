@@ -169,6 +169,7 @@ export default function ComenzarSesion() {
         anotador,
         establecimientoId: seleccionado?.id ?? null,
         establecimiento: seleccionado?.nombre ?? '',
+        clientSessionId: crypto.randomUUID(),
       },
       replace: true,
     });

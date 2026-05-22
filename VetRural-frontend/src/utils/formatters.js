@@ -1,6 +1,9 @@
 export const formatFecha = (fecha) => {
   if (!fecha) return '—';
-  const d = new Date(fecha + 'T00:00:00');
+  // LocalDate → "2026-05-22"  /  LocalDateTime → "2026-05-22T10:30:00"
+  const str = String(fecha).includes('T') ? fecha : `${fecha}T00:00:00`;
+  const d = new Date(str);
+  if (isNaN(d.getTime())) return '—';
   return d.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
 };
 

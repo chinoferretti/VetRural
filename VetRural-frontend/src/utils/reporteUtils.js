@@ -26,7 +26,7 @@ export function generarHTMLReporte({
   const h2Style = 'color:#1B4332;font-size:15px;font-weight:bold;border-left:3px solid #2d7a4f;padding-left:8px;margin-bottom:12px';
   const SEP = '<hr style="border:none;border-top:1px solid #e5e7eb;margin:20px 0"/>';
 
-  const badges = trabajosDisplay.map(t =>
+  const badges = (trabajosDisplay ?? []).map(t =>
     `<span style="display:inline-block;background:#ebf7f1;color:#1B4332;border:1px solid #C8E6D8;border-radius:6px;padding:3px 10px;margin:2px;font-size:12px">${t}</span>`
   ).join('');
 

@@ -83,11 +83,23 @@ export function AuthProvider({ children }) {
     localStorage.removeItem('vetrural_token');
   };
 
+  // Actualiza el id del usuario cuando el backend asigna uno nuevo (ej: después de reset de DB)
+  const actualizarId = (nuevoId) => {
+    if (!usuario || usuario.id === nuevoId) return;
+    const actualizado = { ...usuario, id: nuevoId };
+    setUsuario(actualizado);
+    localStorage.setItem('vetrural_usuario', JSON.stringify(actualizado));
+    const registrados = getRegistrados().map(u =>
+      u.email === usuario.email ? { ...u, id: nuevoId } : u
+    );
+    localStorage.setItem('vetrural_usuarios_registrados', JSON.stringify(registrados));
+  };
+
   const tieneRol   = (...roles) => usuario && roles.includes(usuario.rol);
   const esDemoUser = () => usuario && DEMO_EMAILS.has(usuario.email);
 
   return (
-    <AuthContext.Provider value={{ usuario, login, registrar, logout, cargando, tieneRol, esDemoUser }}>
+    <AuthContext.Provider value={{ usuario, login, registrar, logout, cargando, tieneRol, esDemoUser, actualizarId }}>
       {children}
     </AuthContext.Provider>
   );

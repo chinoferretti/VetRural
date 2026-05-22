@@ -1,26 +1,16 @@
 [
   {
     "id": 1,
-    "nombre": "Dr. Carlos Ramírez",
+    "nombre": "Carlos Ramírez",
     "matricula": "MV-12345",
-    "email": "vet@vetrural.com",
-    "telefono": "+54 9 2954 123456",
+    "email": "carlos.ramirez@vetrural.com",
     "especialidad": "Bovinos"
   },
   {
     "id": 2,
-    "nombre": "Dra. Laura Sosa",
+    "nombre": "Ana González",
     "matricula": "MV-67890",
-    "email": "laura.sosa@vetrural.com",
-    "telefono": "+54 9 2954 654321",
-    "especialidad": "Rumiantes"
-  },
-  {
-    "id": 3,
-    "nombre": "Dr. Martín Rodríguez",
-    "matricula": "MV-11223",
-    "email": "martin.rodriguez@vetrural.com",
-    "telefono": "+54 9 2954 789012",
-    "especialidad": "Bovinos y Ovinos"
+    "email": "ana.gonzalez@vetrural.com",
+    "especialidad": "Bovinos"
   }
 ]

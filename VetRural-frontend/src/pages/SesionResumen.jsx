@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Scale, Hand, Syringe, Smile, Download, Share2, CheckCircle2, AlertTriangle } from 'lucide-react';
+import html2pdf from 'html2pdf.js';
 import { useEstablecimiento } from '../context/EstablecimientoContext';
 import { generarHTMLReporte } from '../utils/reporteUtils';
 import { calcularMetricasApi, guardarSesion, registrarEventosSesion } from '../api/sesionesApi';
@@ -67,21 +68,18 @@ function RowMetrica({ label, value, highlight }) {
   );
 }
 
-// ── Share helper ──────────────────────────────────────────────────────────────
+// ── PDF helpers ───────────────────────────────────────────────────────────────
 
-async function abrirShare(htmlContent, nombreArchivo, titulo) {
-  const blob = new Blob([htmlContent], { type: 'text/html' });
-  const file = new File([blob], nombreArchivo, { type: 'text/html' });
-  if (navigator.share) {
-    const datos = navigator.canShare?.({ files: [file] })
-      ? { title: titulo, files: [file] }
-      : { title: titulo, text: titulo };
-    try { await navigator.share(datos); return; }
-    catch (e) { if (e.name === 'AbortError') return; }
-  }
-  const url = URL.createObjectURL(blob);
-  window.open(url, '_blank');
-  setTimeout(() => URL.revokeObjectURL(url), 15000);
+const PDF_OPT = {
+  margin:      [10, 10, 10, 10],
+  html2canvas: { scale: 2, useCORS: true, logging: false },
+  jsPDF:       { unit: 'mm', format: 'a4', orientation: 'portrait' },
+};
+
+function generarPDF(htmlContent, nombreArchivo) {
+  return html2pdf()
+    .set({ ...PDF_OPT, filename: nombreArchivo })
+    .from(htmlContent);
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -101,6 +99,12 @@ export default function SesionResumen() {
 
     calcularMetricasApi(registros, trabajos).then(setMetricas);
 
+    // Guardia anti-duplicado: StrictMode monta el componente dos veces en dev.
+    // clientSessionId es único por sesión iniciada, así solo se guarda una vez.
+    const saveKey = `sesion_guardada_${state.clientSessionId}`;
+    if (!state.clientSessionId || sessionStorage.getItem(saveKey)) return;
+    sessionStorage.setItem(saveKey, '1');
+
     if (state.veterinarioId && state.establecimientoId) {
       guardarSesion({
         veterinarioId: state.veterinarioId,
@@ -108,7 +112,7 @@ export default function SesionResumen() {
         establecimientoId: state.establecimientoId,
       })
         .then(res => registrarEventosSesion(res.data.id, registros))
-        .catch(() => { /* sesión se guarda localmente si hay error de red */ });
+        .catch(() => { });
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -120,7 +124,7 @@ export default function SesionResumen() {
   const est  = state.establecimiento || seleccionado?.nombre || '';
   const total = registros.length;
   const fecha = new Date().toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' });
-  const nombreArchivo = `sesion-vetrural-${new Date().toISOString().slice(0, 10)}.html`;
+  const nombreArchivo = `sesion-vetrural-${new Date().toISOString().slice(0, 10)}.pdf`;
   const titulo = `Sesión VetRural — ${fecha}`;
   const trabajosDisplay = trabajos.map(t => TRABAJOS_CONFIG[t]?.label || t);
 
@@ -133,13 +137,23 @@ export default function SesionResumen() {
   });
 
   const handleDescargarPDF = () => {
-    const blob = new Blob([getHTML()], { type: 'text/html' });
-    const url  = URL.createObjectURL(blob);
-    window.open(url, '_blank');
-    setTimeout(() => URL.revokeObjectURL(url), 15000);
+    generarPDF(getHTML(), nombreArchivo).save();
   };
 
-  const handleCompartir = () => abrirShare(getHTML(), nombreArchivo, titulo);
+  const handleCompartir = async () => {
+    const pdfBlob = await generarPDF(getHTML(), nombreArchivo).outputPdf('blob');
+    const file    = new File([pdfBlob], nombreArchivo, { type: 'application/pdf' });
+
+    if (navigator.share && navigator.canShare?.({ files: [file] })) {
+      try { await navigator.share({ title: titulo, files: [file] }); return; }
+      catch (e) { if (e.name === 'AbortError') return; }
+    }
+    // Fallback: descarga directa
+    const url = URL.createObjectURL(pdfBlob);
+    const a   = document.createElement('a');
+    a.href = url; a.download = nombreArchivo; a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 15000);
+  };
 
   return (
     <div className="flex flex-col flex-1" style={{ gap: '1rem' }}>

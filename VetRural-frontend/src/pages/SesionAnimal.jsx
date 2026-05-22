@@ -109,6 +109,11 @@ export default function SesionAnimal() {
     setErrorBusq(null);
     try {
       const animal = await buscarAnimalPorCaravana(q);
+      // Verificar que el animal pertenezca al establecimiento activo
+      if (seleccionado?.id && animal.establecimientoId !== seleccionado.id) {
+        setErrorBusq(`Este animal pertenece a otro establecimiento.`);
+        return;
+      }
       continuar(animal);
     } catch (err) {
       if (err.response?.status === 404) {

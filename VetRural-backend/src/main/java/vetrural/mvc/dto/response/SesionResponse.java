@@ -5,6 +5,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 @NoArgsConstructor
@@ -17,4 +18,6 @@ public class SesionResponse {
     private String anotador;
     private Long establecimientoId;
     private String establecimientoNombre;
+    private int totalAnimales;
+    private List<String> trabajos;
 }

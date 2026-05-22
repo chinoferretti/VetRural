@@ -6,8 +6,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import vetrural.mvc.dto.request.CrearSesionRequest;
 import vetrural.mvc.dto.response.SesionResponse;
+import vetrural.mvc.entity.EventoSanitario;
 import vetrural.mvc.entity.Sesion;
 import vetrural.mvc.mapper.SesionMapper;
+import vetrural.mvc.repository.EventoSanitarioRepository;
 import vetrural.mvc.service.SesionService;
 
 import java.net.URI;
@@ -20,6 +22,9 @@ public class SesionController {
     @Autowired
     private SesionService sesionService;
 
+    @Autowired
+    private EventoSanitarioRepository eventoRepo;
+
     @PostMapping
     public ResponseEntity<SesionResponse> crear(@Valid @RequestBody CrearSesionRequest req) {
         Sesion sesion = sesionService.crear(req.getVeterinarioId(), req.getAnotador(), req.getEstablecimientoId());
@@ -30,7 +35,10 @@ public class SesionController {
     @GetMapping
     public List<SesionResponse> listar(@RequestParam Long establecimientoId) {
         return sesionService.listarPorEstablecimiento(establecimientoId).stream()
-                .map(SesionMapper::toResponse)
+                .map(s -> {
+                    List<EventoSanitario> eventos = eventoRepo.findBySesion(s);
+                    return SesionMapper.toResponse(s, eventos);
+                })
                 .toList();
     }
 }

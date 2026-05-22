@@ -20,11 +20,15 @@ export default function EstablecimientoModal({ onClose, requerido = false }) {
 
   const handleSeleccionar = (est) => { seleccionar(est); onClose(); };
 
-  const handleCrear = () => {
+  const handleCrear = async () => {
     if (!form.nombre.trim()) { setError('El nombre es obligatorio'); return; }
-    const nuevo = crear(form);
-    seleccionar(nuevo);
-    onClose();
+    try {
+      const nuevo = await crear(form);
+      seleccionar(nuevo);
+      onClose();
+    } catch (err) {
+      setError(err.message || 'No se pudo crear el establecimiento');
+    }
   };
 
   const handleEliminar = (id) => { eliminar(id); setConfirmEliminar(null); };
