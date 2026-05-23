@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:uadeeduar.sharepoint.com)",
+      "Bash(./mvnw compile *)",
+      "Bash(where java *)",
+      "Bash(java -version)",
+      "PowerShell(Get-Command *)",
+      "PowerShell(Get-ChildItem \"C:\\\\\" -Directory | Where-Object { $_.Name -match \"jdk|java|jre\" } -ErrorAction SilentlyContinue)",
+      "PowerShell(Get-ChildItem \"C:\\\\Program Files\\\\Java\", \"C:\\\\Program Files\\\\Eclipse Adoptium\", \"C:\\\\Program Files\\\\Microsoft\" -ErrorAction SilentlyContinue | Where-Object { $_.Name -match \"jdk\" } | Select-Object FullName)",
+      "PowerShell(Get-ChildItem \"C:\\\\Program Files\" -ErrorAction SilentlyContinue | Select-Object Name | Where-Object { $_.Name -match \"java|jdk|jre\" -or $_.Name -match \"eclipse|adopt|temurin|liberica|zulu\" })"
+    ]
+  }
+}

@@ -1,4 +1,4 @@
-package vetrural.mvc.service;
+package vetrural.mvc.service.Impl;
 
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -8,6 +8,8 @@ import vetrural.mvc.entity.Establecimiento;
 import vetrural.mvc.entity.Usuario;
 import vetrural.mvc.enumerations.TipoUsuarioEnum;
 import vetrural.mvc.repository.UsuarioRepository;
+import vetrural.mvc.service.UsuarioService;
+
 import java.util.List;
 import java.util.Optional;
 

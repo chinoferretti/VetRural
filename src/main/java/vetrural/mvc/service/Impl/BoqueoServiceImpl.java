@@ -1,4 +1,4 @@
-package vetrural.mvc.service;
+package vetrural.mvc.service.Impl;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -9,6 +9,8 @@ import vetrural.mvc.enumerations.DentaduraEnum;
 import vetrural.mvc.enumerations.DeterioroEnum;
 import vetrural.mvc.enumerations.DientesEnum;
 import vetrural.mvc.repository.BoqueoRepository;
+import vetrural.mvc.service.BoqueoService;
+
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;

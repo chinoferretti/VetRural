@@ -1,4 +1,4 @@
-package vetrural.mvc.service;
+package vetrural.mvc.service.Impl;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -6,6 +6,8 @@ import vetrural.mvc.entity.Bovino;
 import vetrural.mvc.entity.Pesaje;
 import vetrural.mvc.entity.Usuario;
 import vetrural.mvc.repository.PesajeRepository;
+import vetrural.mvc.service.PesajeService;
+
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
