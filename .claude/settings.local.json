@@ -8,7 +8,21 @@
       "PowerShell(Get-Command *)",
       "PowerShell(Get-ChildItem \"C:\\\\\" -Directory | Where-Object { $_.Name -match \"jdk|java|jre\" } -ErrorAction SilentlyContinue)",
       "PowerShell(Get-ChildItem \"C:\\\\Program Files\\\\Java\", \"C:\\\\Program Files\\\\Eclipse Adoptium\", \"C:\\\\Program Files\\\\Microsoft\" -ErrorAction SilentlyContinue | Where-Object { $_.Name -match \"jdk\" } | Select-Object FullName)",
-      "PowerShell(Get-ChildItem \"C:\\\\Program Files\" -ErrorAction SilentlyContinue | Select-Object Name | Where-Object { $_.Name -match \"java|jdk|jre\" -or $_.Name -match \"eclipse|adopt|temurin|liberica|zulu\" })"
+      "PowerShell(Get-ChildItem \"C:\\\\Program Files\" -ErrorAction SilentlyContinue | Select-Object Name | Where-Object { $_.Name -match \"java|jdk|jre\" -or $_.Name -match \"eclipse|adopt|temurin|liberica|zulu\" })",
+      "Bash(git -C /Users/santiagolagares/Proyectos/VetRural ls-files)",
+      "Bash(git -C /Users/santiagolagares/Proyectos/VetRural ls-files target)",
+      "Bash(git mv *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git rm *)",
+      "Read(//usr/local/**)",
+      "Bash(brew list *)",
+      "Bash(docker info *)",
+      "Bash(open -a Docker)",
+      "Bash(docker compose build *)",
+      "Bash(docker compose up *)",
+      "Bash(docker compose *)",
+      "Bash(curl -s -o /tmp/resp.json -w \"HTTP %{http_code}\\\\n\" http://localhost:8080/api/bovinos/lotes)",
+      "Read(//tmp/**)"
     ]
   }
 }
