@@ -1,0 +1,67 @@
+[
+  {
+    "id": "P001",
+    "numero": "2025-001",
+    "fecha": "2025-11-02",
+    "veterinario": "Dr. Carlos Ramírez",
+    "matrícula": "MV 12345",
+    "establecimiento": "El Ombú",
+    "productor": "Juan Manuel Pereyra",
+    "tipo": "Emergencia",
+    "animalesInvolucrados": 1,
+    "resumen": "Atención de urgencia por síndrome febril en bovino ARG-004.",
+    "firmado": true
+  },
+  {
+    "id": "P002",
+    "numero": "2025-002",
+    "fecha": "2025-10-01",
+    "veterinario": "Dr. Carlos Ramírez",
+    "matrícula": "MV 12345",
+    "establecimiento": "El Ombú",
+    "productor": "Juan Manuel Pereyra",
+    "tipo": "Vacunación",
+    "animalesInvolucrados": 128,
+    "resumen": "Vacunación antiaftosa obligatoria de otoño. Biológico oficial SENASA.",
+    "firmado": true
+  },
+  {
+    "id": "P003",
+    "numero": "2025-003",
+    "fecha": "2025-09-10",
+    "veterinario": "Dr. Carlos Ramírez",
+    "matrícula": "MV 12345",
+    "establecimiento": "El Ombú",
+    "productor": "Juan Manuel Pereyra",
+    "tipo": "Tratamiento",
+    "animalesInvolucrados": 1,
+    "resumen": "Tratamiento de flemón interdigital en bovino ARG-002.",
+    "firmado": true
+  },
+  {
+    "id": "P004",
+    "numero": "2025-004",
+    "fecha": "2025-07-15",
+    "veterinario": "Dra. Laura Sosa",
+    "matrícula": "MV 67890",
+    "establecimiento": "El Ombú",
+    "productor": "Juan Manuel Pereyra",
+    "tipo": "Control",
+    "animalesInvolucrados": 142,
+    "resumen": "Control general del rodeo. Estimación de preñez por ecografía.",
+    "firmado": true
+  },
+  {
+    "id": "P005",
+    "numero": "2025-005",
+    "fecha": "2025-04-10",
+    "veterinario": "Dra. Laura Sosa",
+    "matrícula": "MV 67890",
+    "establecimiento": "El Ombú",
+    "productor": "Juan Manuel Pereyra",
+    "tipo": "Evaluación",
+    "animalesInvolucrados": 1,
+    "resumen": "Evaluación reproductiva de toro reproductor ARG-005. Resultado: APTO.",
+    "firmado": false
+  }
+]
