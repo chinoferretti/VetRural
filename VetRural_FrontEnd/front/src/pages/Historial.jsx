@@ -3,6 +3,7 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import { formatFecha } from '../utils/formatters';
 import { generarHTMLReporte } from '../utils/reporteUtils';
 import { Download, Trash2 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 const TRABAJO_COLORES = {
   'Boqueo':      { bg: '#EBF7F1', text: '#1B4332' },
@@ -31,6 +32,9 @@ function descargarMetricas(sesion) {
 }
 
 export default function Historial() {
+  const { usuario } = useAuth();
+  const historialKey = `vetrural_historial_${usuario?.id || 'anon'}`;
+
   const [visitas,      setVisitas]      = useState([]);
   const [cargando,     setCargando]     = useState(true);
   const [busqueda,     setBusqueda]     = useState('');
@@ -38,21 +42,21 @@ export default function Historial() {
 
   useEffect(() => {
     try {
-      const guardadas = JSON.parse(localStorage.getItem('vetrural_historial') || '[]');
+      const guardadas = JSON.parse(localStorage.getItem(historialKey) || '[]');
       const ordenadas = [...guardadas].sort((a, b) => b.fecha.localeCompare(a.fecha));
       setVisitas(ordenadas);
     } catch {
       setVisitas([]);
     }
     setCargando(false);
-  }, []);
+  }, [historialKey]);
 
   const eliminarSesion = (id) => {
     const nuevas = visitas.filter(v => v.id !== id);
     setVisitas(nuevas);
     setConfirmando(null);
     try {
-      localStorage.setItem('vetrural_historial', JSON.stringify(nuevas));
+      localStorage.setItem(historialKey, JSON.stringify(nuevas));
     } catch { /* sin espacio */ }
   };
 

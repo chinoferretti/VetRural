@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Scale, Hand, Syringe, Smile, Download, Share2, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { useEstablecimiento } from '../context/EstablecimientoContext';
+import { useAuth } from '../context/AuthContext';
 import { generarHTMLReporte } from '../utils/reporteUtils';
 import { calcularMetricasApi } from '../api/sesionesApi';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -91,6 +92,8 @@ export default function SesionResumen() {
   const location = useLocation();
   const state    = location.state;
   const { seleccionado } = useEstablecimiento();
+  const { usuario } = useAuth();
+  const historialKey = `vetrural_historial_${usuario?.id || 'anon'}`;
   const [metricas, setMetricas] = useState(null);
 
   const registros  = state?.registros ?? [];
@@ -102,7 +105,7 @@ export default function SesionResumen() {
     calcularMetricasApi(registros, trabajos).then(m => {
       setMetricas(m);
       try {
-        const previas = JSON.parse(localStorage.getItem('vetrural_historial') || '[]');
+        const previas = JSON.parse(localStorage.getItem(historialKey) || '[]');
         // Evitar duplicados si StrictMode ejecuta el efecto dos veces
         if (previas.find(s => s.id === sesionIdRef.current)) return;
         const sesion = {
@@ -117,7 +120,7 @@ export default function SesionResumen() {
           tratamientos:         [],
           metricas:             m,
         };
-        localStorage.setItem('vetrural_historial', JSON.stringify([sesion, ...previas]));
+        localStorage.setItem(historialKey, JSON.stringify([sesion, ...previas]));
       } catch { /* sin espacio en disco */ }
     });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps

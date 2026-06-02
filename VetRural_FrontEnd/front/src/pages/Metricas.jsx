@@ -4,6 +4,7 @@ import {
   LineChart, Line,
 } from 'recharts';
 import { useEstablecimiento } from '../context/EstablecimientoContext';
+import { useAuth } from '../context/AuthContext';
 import { getMetricasEstablecimiento } from '../api/establecimientosApi';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { PawPrint, Scale, Clock, Heart, CircleSlash, Users, Stethoscope, Syringe, AlertTriangle } from 'lucide-react';
@@ -60,9 +61,11 @@ function SectionTitle({ children }) {
 // ── Stats de sesiones desde localStorage ──────────────────────────────────────
 
 function useSesionStats() {
+  const { usuario } = useAuth();
+  const historialKey = `vetrural_historial_${usuario?.id || 'anon'}`;
   return useMemo(() => {
     try {
-      const sesiones = JSON.parse(localStorage.getItem('vetrural_historial') || '[]');
+      const sesiones = JSON.parse(localStorage.getItem(historialKey) || '[]');
       const totalSesiones     = sesiones.length;
       const totalAtendidos    = sesiones.reduce((s, v) => s + (v.animalesAtendidos?.length ?? 0), 0);
       const totalTratamientos = sesiones.reduce((s, v) => s + (v.tratamientos?.length ?? 0), 0);
@@ -88,7 +91,7 @@ function useSesionStats() {
     } catch {
       return { totalSesiones: 0, totalAtendidos: 0, totalTratamientos: 0, totalOutliers: 0, adpvPromedio: null, evolucionPeso: [], trabajosChart: [] };
     }
-  }, []);
+  }, [historialKey]);
 }
 
 // ── Componente principal ───────────────────────────────────────────────────────

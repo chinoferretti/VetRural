@@ -15,6 +15,16 @@ const DEMO = [
   { id: 4, nombre: 'Los Aromos',    ubicacion: 'Santa Fe'     },
 ];
 
+const DEFAULTS_NOMBRES = [
+  { nombre: 'Campo Principal',       ubicacion: '' },
+  { nombre: 'Establecimiento Norte', ubicacion: '' },
+  { nombre: 'Establecimiento Sur',   ubicacion: '' },
+];
+
+function crearDefaults(userId) {
+  return DEFAULTS_NOMBRES.map((e, i) => ({ id: `default_${userId}_${i + 1}`, ...e }));
+}
+
 function storageKey(userId) { return `vetrural_establecimientos_${userId}`; }
 
 function cargarLocal(userId) {
@@ -48,17 +58,26 @@ export function EstablecimientoProvider({ children }) {
     getEstablecimientosDelUsuario(usuario.id)
       .then(data => {
         const locales = cargarLocal(usuario.id);
-        const merged = data.map(e => ({
-          ...e,
-          ubicacion: locales.find(l => l.id === e.id)?.ubicacion || '',
-        }));
-        setLista(merged);
-        persistirLocal(usuario.id, merged); // sobreescribe cualquier dato local viejo
+        let lista;
+        if (data.length === 0) {
+          // Sin establecimientos en el backend → usar los locales o crear 3 por defecto
+          lista = locales.length > 0 ? locales : crearDefaults(usuario.id);
+          if (locales.length === 0) persistirLocal(usuario.id, lista);
+        } else {
+          lista = data.map(e => ({
+            ...e,
+            ubicacion: locales.find(l => l.id === e.id)?.ubicacion || '',
+          }));
+          persistirLocal(usuario.id, lista);
+        }
+        setLista(lista);
       })
       .catch(() => {
-        // Sin conexión: usar solo establecimientos reales cacheados (filtra ids fake > 100)
-        const locales = cargarLocal(usuario.id).filter(e => e.id <= 100);
-        setLista(locales);
+        // Sin conexión: usar caché local o crear 3 por defecto
+        const locales = cargarLocal(usuario.id);
+        const lista = locales.length > 0 ? locales : crearDefaults(usuario.id);
+        if (locales.length === 0) persistirLocal(usuario.id, lista);
+        setLista(lista);
       })
       .finally(() => setCargando(false));
   }, [usuario?.id]);
