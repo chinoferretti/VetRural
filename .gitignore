@@ -1,4 +1,34 @@
+# Misc
 .claude/
 *.pdf
 *.code-workspace
 .DS_Store
+
+# Node
+node_modules/
+dist/
+.cache/
+.parcel-cache/
+
+# Env files
+.env
+.env.local
+.env.*.local
+.env.production
+.env.development
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+venv/
+.venv/
+*.egg-info/
+.pytest_cache/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+Thumbs.db
