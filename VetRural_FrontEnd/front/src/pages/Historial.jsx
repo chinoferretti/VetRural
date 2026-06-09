@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { formatFecha } from '../utils/formatters';
 import { generarHTMLReporte } from '../utils/reporteUtils';
@@ -32,6 +33,7 @@ function descargarMetricas(sesion) {
 }
 
 export default function Historial() {
+  const navigate = useNavigate();
   const { usuario } = useAuth();
   const historialKey = `vetrural_historial_${usuario?.id || 'anon'}`;
 
@@ -39,6 +41,13 @@ export default function Historial() {
   const [cargando,     setCargando]     = useState(true);
   const [busqueda,     setBusqueda]     = useState('');
   const [confirmando,  setConfirmando]  = useState(null); // id de la sesión a eliminar
+
+  useEffect(() => {
+    window.history.pushState({ historial: true }, '');
+    const onPop = () => navigate('/dashboard', { replace: true });
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, [navigate]);
 
   useEffect(() => {
     try {

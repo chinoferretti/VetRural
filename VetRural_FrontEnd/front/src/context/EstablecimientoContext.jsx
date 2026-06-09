@@ -117,8 +117,15 @@ export function EstablecimientoProvider({ children }) {
     if (seleccionado?.id === id) setSeleccionado(null);
   };
 
+  const reemplazarEstablecimiento = (oldId, nuevoId) => {
+    const nuevaLista = lista.map(e => e.id === oldId ? { ...e, id: nuevoId } : e);
+    setLista(nuevaLista);
+    if (seleccionado?.id === oldId) setSeleccionado(s => ({ ...s, id: nuevoId }));
+    if (!DEMO_IDS.has(usuario?.id)) persistirLocal(usuario.id, nuevaLista);
+  };
+
   return (
-    <EstablecimientoContext.Provider value={{ lista, seleccionado, seleccionar, crear, unirse, eliminar, cargando }}>
+    <EstablecimientoContext.Provider value={{ lista, seleccionado, seleccionar, crear, unirse, eliminar, reemplazarEstablecimiento, cargando }}>
       {children}
     </EstablecimientoContext.Provider>
   );

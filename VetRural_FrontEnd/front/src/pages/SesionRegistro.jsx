@@ -35,6 +35,7 @@ const SITUACIONES_TACTO = [
   { value: 'Perdonada',     label: 'Perdonada' },
   { value: 'Frigorífico',   label: 'Frigorífico' },
   { value: 'Apta_Servicio', label: 'Apta servicio' },
+  { value: 'No_Aplica',     label: 'No aplica' },
 ];
 const PERIODOS_PRENEZ = [
   { value: 'Menos_3_Meses',     label: 'Menos de 3 meses' },

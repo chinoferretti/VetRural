@@ -119,6 +119,11 @@ export default function SesionAnimal() {
   };
 
   const continuar = (animal) => {
+    const yaEsta = (sesion.registros || []).some(r => r.animal.id === animal.id);
+    if (yaEsta) {
+      setError(`El bovino ${animal.caravana} ya fue procesado en esta sesión.`);
+      return;
+    }
     navigate('/sesion/registro', { state: { ...sesion, animal }, replace: true });
   };
 

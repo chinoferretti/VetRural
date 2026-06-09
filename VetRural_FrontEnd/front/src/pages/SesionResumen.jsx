@@ -161,7 +161,10 @@ export default function SesionResumen() {
     setTimeout(() => URL.revokeObjectURL(url), 15000);
   };
 
-  const handleCompartir = () => abrirShare(getHTML(), nombreArchivo, titulo);
+  const handleCompartir = () => {
+    const nombrePdf = nombreArchivo.replace('.html', '.pdf');
+    abrirShare(getHTML(), nombrePdf, titulo);
+  };
 
   return (
     <div className="flex flex-col flex-1" style={{ gap: '1rem' }}>
@@ -247,6 +250,7 @@ export default function SesionResumen() {
               ['Perdonadas',    m.tacto.perdonadas],
               ['Frigorífico',   m.tacto.frigorifico],
               ['Apta servicio', m.tacto.aptaServicio],
+              ['No aplica',     m.tacto.noAplica],
             ].filter(([, v]) => v > 0).map(([s, v]) => (
               <RowMetrica key={s} label={s}
                 value={`${v} (${m.tacto.totalTactadas > 0 ? Math.round(v / m.tacto.totalTactadas * 100) : 0}%)`} />

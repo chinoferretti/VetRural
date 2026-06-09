@@ -7,13 +7,15 @@ import { useEstablecimiento } from '../context/EstablecimientoContext';
 import { useAuth } from '../context/AuthContext';
 
 const RAZAS = ['Angus', 'Hereford', 'Brangus', 'Braford', 'Holstein', 'Jersey', 'Charolais', 'Limousin', 'Simmental', 'Brahman', 'Nelore', 'Gyr'];
-const TIPOS = ['Ternero', 'Novillito', 'Novillo', 'Vaquillona', 'Vaca', 'Torito', 'Toro'];
+const TIPOS_HEMBRA = ['Ternera', 'Vaquillona', 'Vaca'];
+const TIPOS_MACHO  = ['Ternero', 'Novillito', 'Novillo', 'Torito', 'Toro'];
 const LOTES_DEFAULT = [];
 const SITUACIONES_TACTO = [
   { value: 'Preñada',       label: 'Preñada' },
   { value: 'Perdonada',     label: 'Perdonada' },
   { value: 'Frigorífico',   label: 'Frigorífico' },
   { value: 'Apta_Servicio', label: 'Apta servicio' },
+  { value: 'No_Aplica',     label: 'No aplica' },
 ];
 const PERIODOS_PRENEZ = [
   { value: 'Menos_3_Meses',     label: 'Menos de 3 meses' },
@@ -79,40 +81,67 @@ export default function EditarAnimal() {
   const navigate = useNavigate();
   const { seleccionado } = useEstablecimiento();
   const { usuario } = useAuth();
-  const [cargando, setCargando]   = useState(true);
-  const [guardando, setGuardando] = useState(false);
-  const [exito, setExito]         = useState(false);
-  const [form, setForm]           = useState(null);
-  const [lotes, setLotes]         = useState(LOTES_DEFAULT);
-  const [nuevoLote, setNuevoLote] = useState('');
-  const [agregandoLote, setAgregandoLote] = useState(false);
+  const [cargando, setCargando]               = useState(true);
+  const [guardando, setGuardando]             = useState(false);
+  const [exito, setExito]                     = useState(false);
+  const [form, setForm]                       = useState(null);
+  const [originalClinico, setOriginalClinico] = useState({});
+  const [lotes, setLotes]                     = useState(LOTES_DEFAULT);
+  const [nuevoLote, setNuevoLote]             = useState('');
+  const [agregandoLote, setAgregandoLote]     = useState(false);
 
   useEffect(() => {
-  getAnimalById(id)
-    .then(animal => {
-      setForm({
-        caravana:         animal.caravana,
-        sexo:             animal.sexo,
-        fechaNacimiento:  animal.nacimiento || '',
-        lote:             animal.lote || '',
-        raza:             animal.raza || '',
-        tipo:             animal.tipo || '',
-        pelaje:           animal.obs || '',
-        boqueo_dientes:   '',
-        boqueo_deterioro: '',
-        boqueo_dentadura: '',
-        peso:             '',
-        tacto_situacion:  '',
-        tacto_periodo:    '',
-        vac_aftosa: '', vac_brucelosis: '', vac_carbunco: '',
-        vac_clostridial: '', vac_ibr_bvd: '',
-      });
-      setCargando(false);
-    })
-    .catch(() => setCargando(false));
-}, [id]);
+    Promise.all([
+      getAnimalById(id),
+      api.get(`/manga/${id}/ultimo-pesaje`).catch(() => ({ data: null })),
+      api.get(`/manga/${id}/ultimo-tacto`).catch(() => ({ data: null })),
+      api.get(`/manga/${id}/ultimo-boqueo`).catch(() => ({ data: null })),
+      api.get(`/manga/${id}/vacunaciones`).catch(() => ({ data: [] })),
+    ])
+      .then(([animal, pesajeRes, tactoRes, boqueoRes, vacunasRes]) => {
+        const pesaje  = pesajeRes.data  || {};
+        const tacto   = tactoRes.data   || {};
+        const boqueo  = boqueoRes.data  || {};
+        const vacunas = vacunasRes.data  || [];
 
-  // Cargar lotes del backend
+        const getVac = (nombre) => {
+          const matching = vacunas.filter(v => v.vacuna === nombre);
+          if (!matching.length) return '';
+          const latest = matching.reduce((a, b) => (a.fechaHora > b.fechaHora ? a : b));
+          return latest.fechaHora?.slice(0, 10) || '';
+        };
+
+        const clinico = {
+          boqueo_dientes:   boqueo.dientes   || '',
+          boqueo_deterioro: boqueo.deterioro || '',
+          boqueo_dentadura: boqueo.dentadura || '',
+          peso:             pesaje.peso ? String(pesaje.peso) : '',
+          tacto_situacion:  tacto.situacion  || '',
+          tacto_periodo:    tacto.periodo    || '',
+          vac_aftosa:      getVac('Aftosa'),
+          vac_brucelosis:  getVac('Brucelosis'),
+          vac_carbunco:    getVac('Carbunco'),
+          vac_clostridial: getVac('Clostridial'),
+          vac_ibr:         getVac('IBR'),
+          vac_bvd:         getVac('BVD'),
+        };
+
+        setOriginalClinico(clinico);
+        setForm({
+          caravana:        animal.caravana,
+          sexo:            animal.sexo,
+          fechaNacimiento: animal.nacimiento || '',
+          lote:            animal.lote       || '',
+          raza:            animal.raza       || '',
+          tipo:            animal.tipo       || '',
+          pelaje:          animal.obs        || '',
+          ...clinico,
+        });
+        setCargando(false);
+      })
+      .catch(() => setCargando(false));
+  }, [id]);
+
   useEffect(() => {
     getLotes().then(data => { if (data.length > 0) setLotes(data); }).catch(() => {});
   }, []);
@@ -129,60 +158,73 @@ export default function EditarAnimal() {
   };
 
   const handleSubmit = async (e) => {
-  e.preventDefault();
-  setGuardando(true);
-  try {
-    await actualizarAnimal(id, {
-      caravana:          form.caravana,
-      sexo:              form.sexo,
-      nacimiento:        form.fechaNacimiento || null,
-      lote:              form.lote || null,
-      raza:              form.raza || null,
-      tipo:              form.tipo || null,
-      obs:               form.pelaje || null,
-      establecimientoId: seleccionado?.id ?? 1,
-    });
-
-    const bovinoId = Number(id);
-    const registradoPorId = usuario.id;
-
-    if (form.peso) {
-      await api.post('/manga/pesaje', { bovinoId, registradoPorId, peso: Number(form.peso) });
-    }
-    if (form.tacto_situacion) {
-      await api.post('/manga/tacto', {
-        bovinoId, registradoPorId,
-        situacion: form.tacto_situacion,
-        periodo:   form.tacto_periodo || null,
+    e.preventDefault();
+    setGuardando(true);
+    try {
+      await actualizarAnimal(id, {
+        caravana:          form.caravana,
+        sexo:              form.sexo,
+        nacimiento:        form.fechaNacimiento || null,
+        lote:              form.lote || null,
+        raza:              form.raza || null,
+        tipo:              form.tipo || null,
+        obs:               form.pelaje || null,
+        establecimientoId: seleccionado?.id ?? 1,
       });
-    }
-    if (form.boqueo_dientes) {
-      await api.post('/manga/boqueo', {
-        bovinoId, registradoPorId,
-        dientes:   form.boqueo_dientes,
-        deterioro: form.boqueo_deterioro || null,
-        dentadura: form.boqueo_dentadura || null,
-      });
-    }
-    const vacunas = [
-      ['vac_aftosa', 'Aftosa'], ['vac_brucelosis', 'Brucelosis'],
-      ['vac_carbunco', 'Carbunco'], ['vac_clostridial', 'Clostridial'],
-      ['vac_ibr_bvd', 'IBR_BVD'],
-    ];
-    for (const [campo, vacuna] of vacunas) {
-      if (form[campo]) {
-        await api.post('/manga/vacunacion', { bovinoId, registradoPorId, vacuna });
+
+      const bovinoId        = Number(id);
+      const registradoPorId = usuario.id;
+
+      if (form.peso && form.peso !== originalClinico.peso) {
+        await api.post('/manga/pesaje', { bovinoId, registradoPorId, peso: Number(form.peso) });
       }
-    }
 
-    setExito(true);
-    setTimeout(() => navigate('/animales', { replace: true }), 1500);
-  } catch (err) {
-    console.error(err);
-  } finally {
-    setGuardando(false);
-  }
-};
+      if (form.boqueo_dientes && (
+        form.boqueo_dientes   !== originalClinico.boqueo_dientes   ||
+        form.boqueo_deterioro !== originalClinico.boqueo_deterioro ||
+        form.boqueo_dentadura !== originalClinico.boqueo_dentadura
+      )) {
+        await api.post('/manga/boqueo', {
+          bovinoId, registradoPorId,
+          dientes:   form.boqueo_dientes,
+          deterioro: form.boqueo_deterioro || null,
+          dentadura: form.boqueo_dentadura || null,
+        });
+      }
+
+      if (form.tacto_situacion && (
+        form.tacto_situacion !== originalClinico.tacto_situacion ||
+        form.tacto_periodo   !== originalClinico.tacto_periodo
+      )) {
+        await api.post('/manga/tacto', {
+          bovinoId, registradoPorId,
+          situacion: form.tacto_situacion,
+          periodo:   form.tacto_periodo || null,
+        });
+      }
+
+      const vacunas = [
+        ['vac_aftosa',      'Aftosa'],
+        ['vac_brucelosis',  'Brucelosis'],
+        ['vac_carbunco',    'Carbunco'],
+        ['vac_clostridial', 'Clostridial'],
+        ['vac_ibr',         'IBR'],
+        ['vac_bvd',         'BVD'],
+      ];
+      for (const [campo, vacuna] of vacunas) {
+        if (form[campo] && form[campo] !== originalClinico[campo]) {
+          await api.post('/manga/vacunacion', { bovinoId, registradoPorId, vacuna });
+        }
+      }
+
+      setExito(true);
+      setTimeout(() => navigate('/animales', { replace: true }), 1500);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setGuardando(false);
+    }
+  };
 
   if (cargando) return <LoadingSpinner texto="Cargando animal..." />;
   if (!form)    return (
@@ -203,10 +245,12 @@ export default function EditarAnimal() {
     );
   }
 
+  const tiposDisponibles = form.sexo === 'Hembra' ? TIPOS_HEMBRA : TIPOS_MACHO;
+  const notaClinico = 'Solo se registra si modificás el valor actual';
+
   return (
     <div className="w-full flex flex-col" style={{ gap: '1.75rem' }}>
 
-      {/* Header */}
       <div>
         <h1 className="text-3xl font-bold" style={{ color: 'var(--verde-oscuro)' }}>Editar animal</h1>
         <p className="mt-1 font-mono text-sm" style={{ color: '#9CA3AF' }}>{form.caravana}</p>
@@ -222,7 +266,7 @@ export default function EditarAnimal() {
           <Field label="Tipo">
             <select value={form.tipo} onChange={e => set('tipo', e.target.value)} className={inputCls} style={inputSty}>
               <option value=""></option>
-              {TIPOS.map(t => <option key={t}>{t}</option>)}
+              {tiposDisponibles.map(t => <option key={t}>{t}</option>)}
             </select>
           </Field>
 
@@ -236,12 +280,10 @@ export default function EditarAnimal() {
           <Field label="Lote">
             {agregandoLote ? (
               <div className="flex gap-2">
-                <input
-                  autoFocus value={nuevoLote}
+                <input autoFocus value={nuevoLote}
                   onChange={e => setNuevoLote(e.target.value)}
                   onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); confirmarNuevoLote(); } }}
-                  placeholder="Nombre del lote"
-                  className={inputCls} style={inputSty}
+                  placeholder="Nombre del lote" className={inputCls} style={inputSty}
                 />
                 <button type="button" onClick={confirmarNuevoLote}
                   className="flex items-center justify-center rounded-xl font-bold flex-shrink-0"
@@ -269,45 +311,32 @@ export default function EditarAnimal() {
             )}
           </Field>
 
-          <Field
-            label="Fecha de nacimiento"
-            nota="Opcional. Si no se conoce, el boqueo determinará la edad."
-          >
-            <input
-              type="date" value={form.fechaNacimiento}
-              onChange={e => set('fechaNacimiento', e.target.value)}
-              className={inputCls} style={inputSty}
-            />
+          <Field label="Fecha de nacimiento" nota="Opcional. Si no se conoce, el boqueo determinará la edad.">
+            <input type="date" value={form.fechaNacimiento} onChange={e => set('fechaNacimiento', e.target.value)}
+              className={inputCls} style={inputSty} />
           </Field>
 
           <Field label="Pelaje">
-            <input
-              value={form.pelaje} onChange={e => set('pelaje', e.target.value)}
+            <input value={form.pelaje} onChange={e => set('pelaje', e.target.value)}
               placeholder="Ej: Negro entero, colorado overo..."
-              className={inputCls} style={inputSty}
-            />
+              className={inputCls} style={inputSty} />
           </Field>
         </Seccion>
 
         {/* ── Boqueo ── */}
         <Seccion titulo="Boqueo" icono="🦷">
-          <Field
-            label="Cantidad de dientes"
-            nota={!form.fechaNacimiento ? 'Se usará para estimar la edad del animal' : undefined}
-          >
+          <Field label="Cantidad de dientes" nota={notaClinico}>
             <select value={form.boqueo_dientes} onChange={e => set('boqueo_dientes', e.target.value)} className={inputCls} style={inputSty}>
               <option value=""></option>
               {DIENTES_OPCIONES.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
           </Field>
-
           <Field label="Deterioro">
             <select value={form.boqueo_deterioro} onChange={e => set('boqueo_deterioro', e.target.value)} className={inputCls} style={inputSty}>
               <option value=""></option>
               {DETERIOROS.map(d => <option key={d}>{d}</option>)}
             </select>
           </Field>
-
           <Field label="Tipo de dentadura">
             <select value={form.boqueo_dentadura} onChange={e => set('boqueo_dentadura', e.target.value)} className={inputCls} style={inputSty}>
               <option value=""></option>
@@ -318,19 +347,15 @@ export default function EditarAnimal() {
 
         {/* ── Pesaje ── */}
         <Seccion titulo="Pesaje" icono="⚖️">
-          <Field label="Peso del animal (kg)">
-            <input
-              type="number" min="0"
-              value={form.peso} onChange={e => set('peso', e.target.value)}
-              placeholder="Ej: 420"
-              className={inputCls} style={inputSty}
-            />
+          <Field label="Peso del animal (kg)" nota={notaClinico}>
+            <input type="number" min="0" value={form.peso} onChange={e => set('peso', e.target.value)}
+              placeholder="Ej: 420" className={inputCls} style={inputSty} />
           </Field>
         </Seccion>
 
         {/* ── Tacto ── */}
         <Seccion titulo="Tacto" icono="🔍">
-          <Field label="Situación">
+          <Field label="Situación" nota={notaClinico}>
             <select value={form.tacto_situacion} onChange={e => set('tacto_situacion', e.target.value)} className={inputCls} style={inputSty}>
               <option value=""></option>
               {SITUACIONES_TACTO.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
@@ -353,14 +378,12 @@ export default function EditarAnimal() {
             ['vac_brucelosis',  'Brucelosis'],
             ['vac_carbunco',    'Carbunco'],
             ['vac_clostridial', 'Clostridial'],
-            ['vac_ibr_bvd',    'IBR / BVD'],
+            ['vac_ibr',         'IBR'],
+            ['vac_bvd',         'BVD'],
           ].map(([campo, label]) => (
-            <Field key={campo} label={label}>
-              <input
-                type="date" value={form[campo]}
-                onChange={e => set(campo, e.target.value)}
-                className={inputCls} style={inputSty}
-              />
+            <Field key={campo} label={label} nota={notaClinico}>
+              <input type="date" value={form[campo]} onChange={e => set(campo, e.target.value)}
+                className={inputCls} style={inputSty} />
             </Field>
           ))}
         </Seccion>

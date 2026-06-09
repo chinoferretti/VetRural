@@ -1,20 +1,22 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { crearAnimal, getLotes, existeCaravana } from '../api/animalesApi';
-import { crearEstablecimiento } from '../api/establecimientosApi';
+import { crearEstablecimiento, asociarUsuario } from '../api/establecimientosApi';
 import api from '../api/axios';
 import { useEstablecimiento } from '../context/EstablecimientoContext';
 import { useAuth } from '../context/AuthContext';
 
 
 const RAZAS = ['Angus', 'Hereford', 'Brangus', 'Braford', 'Holstein', 'Jersey', 'Charolais', 'Limousin', 'Simmental', 'Brahman', 'Nelore', 'Gyr'];
-const TIPOS = ['Ternero', 'Novillito', 'Novillo', 'Vaquillona', 'Vaca', 'Torito', 'Toro'];
+const TIPOS_HEMBRA = ['Ternera', 'Vaquillona', 'Vaca'];
+const TIPOS_MACHO  = ['Ternero', 'Novillito', 'Novillo', 'Torito', 'Toro'];
 const LOTES_DEFAULT = [];
 const SITUACIONES_TACTO = [
   { value: 'Preñada',       label: 'Preñada' },
   { value: 'Perdonada',     label: 'Perdonada' },
   { value: 'Frigorífico',   label: 'Frigorífico' },
   { value: 'Apta_Servicio', label: 'Apta servicio' },
+  { value: 'No_Aplica',     label: 'No aplica' },
 ];
 const PERIODOS_PRENEZ = [
   { value: 'Menos_3_Meses',     label: 'Menos de 3 meses' },
@@ -91,7 +93,7 @@ function Seccion({ titulo, icono, children }) {
 
 export default function NuevoAnimal() {
   const navigate = useNavigate();
-  const { seleccionado } = useEstablecimiento();
+  const { seleccionado, reemplazarEstablecimiento } = useEstablecimiento();
   const { usuario } = useAuth();
   const [form, setForm]           = useState(INICIAL);
   const [guardando, setGuardando] = useState(false);
@@ -147,11 +149,14 @@ const handleSubmit = async (e) => {
   if (Object.keys(e2).length) { setErrores(e2); return; }
   setGuardando(true);
   try {
-    // Resolver establecimientoId: si es string (local) o numérico que no existe en backend, crearlo
+    // Resolver establecimientoId: si es string (local) crearlo en el backend y sincronizar contexto
     let establecimientoId = seleccionado?.id;
     if (typeof establecimientoId !== 'number') {
+      const oldId = seleccionado.id;
       const est = await crearEstablecimiento(seleccionado.nombre);
       establecimientoId = est.id;
+      await asociarUsuario(est.id, usuario.id).catch(() => {});
+      reemplazarEstablecimiento(oldId, est.id);
     }
 
     // 1. Crear el animal (con retry si el establecimiento numérico no existe en el backend)
@@ -168,8 +173,11 @@ const handleSubmit = async (e) => {
       });
     } catch (err404) {
       if (err404?.response?.status === 404) {
+        const oldId = seleccionado.id;
         const est = await crearEstablecimiento(seleccionado.nombre);
         establecimientoId = est.id;
+        await asociarUsuario(est.id, usuario.id).catch(() => {});
+        reemplazarEstablecimiento(oldId, est.id);
         animal = await crearAnimal({
           caravana:  form.caravana,
           sexo:      form.sexo,
@@ -291,7 +299,12 @@ const handleSubmit = async (e) => {
           <Field label="Sexo" required>
             <select
               value={form.sexo}
-              onChange={e => set('sexo', e.target.value)}
+              onChange={e => {
+                const nuevoSexo = e.target.value;
+                const tiposValidos = nuevoSexo === 'Hembra' ? TIPOS_HEMBRA : TIPOS_MACHO;
+                setForm(f => ({ ...f, sexo: nuevoSexo, tipo: tiposValidos.includes(f.tipo) ? f.tipo : '' }));
+                setErrores(er => ({ ...er, sexo: undefined }));
+              }}
               className={inputCls}
               style={{ ...inputSty, borderColor: errores.sexo ? '#EF4444' : '#D1D5DB' }}
             >
@@ -303,7 +316,7 @@ const handleSubmit = async (e) => {
           <Field label="Tipo">
             <select value={form.tipo} onChange={e => set('tipo', e.target.value)} className={inputCls} style={inputSty}>
               <option value=""></option>
-              {TIPOS.map(t => <option key={t}>{t}</option>)}
+              {(form.sexo === 'Hembra' ? TIPOS_HEMBRA : TIPOS_MACHO).map(t => <option key={t}>{t}</option>)}
             </select>
           </Field>
 

@@ -298,7 +298,7 @@ export function calcularMetricasDesdeSesion(registros, trabajos) {
 
   let tacto = null;
   if (trabajos.includes('tacto')) {
-    const conteos = { Preñada: 0, Perdonada: 0, Frigorífico: 0, Apta_Servicio: 0 };
+    const conteos = { Preñada: 0, Perdonada: 0, Frigorífico: 0, Apta_Servicio: 0, No_Aplica: 0 };
     const dist = { cabeza: 0, cuerpo: 0, cola: 0 };
     const PERIODO_MAP = { 'Menos_3_Meses': 'cabeza', 'Entre_3_y_6_Meses': 'cuerpo', 'Mas_6_Meses': 'cola' };
 
@@ -318,6 +318,7 @@ export function calcularMetricasDesdeSesion(registros, trabajos) {
       perdonadas:        conteos['Perdonada'],
       frigorifico:       conteos['Frigorífico'],
       aptaServicio:      conteos['Apta_Servicio'],
+      noAplica:          conteos['No_Aplica'],
       totalTactadas:     total,
       porcentajePreniez: total > 0 ? Math.round((conteos['Preñada'] / total) * 100) : 0,
       distribucion:      dist,

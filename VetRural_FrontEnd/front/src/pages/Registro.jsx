@@ -40,7 +40,7 @@ export default function Registro() {
         otros:       'Anotador',
       };
 
-      await api.post('/usuarios', {
+      const { data: usuarioCreado } = await api.post('/usuarios', {
         nombre:     form.nombre,
         apellido:   form.apellido,
         email:      form.email,
@@ -48,9 +48,9 @@ export default function Registro() {
         tipo:       tipoMap[form.rol],
       });
 
-      // Guardar también en localStorage para que el login local pueda encontrar al usuario
+      // Guardar en localStorage con el ID real del backend para que el fallback de login funcione
       try {
-        registrar({ nombre: form.nombre, apellido: form.apellido, email: form.email, password: form.password, rol: form.rol });
+        registrar({ nombre: form.nombre, apellido: form.apellido, email: form.email, password: form.password, rol: form.rol, id: usuarioCreado?.idUsuario });
       } catch { /* ignorar si el email ya existe en localStorage */ }
 
       navigate('/login', { replace: true, state: { registrado: true } });

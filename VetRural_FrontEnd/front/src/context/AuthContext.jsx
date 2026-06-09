@@ -62,10 +62,10 @@ export function AuthProvider({ children }) {
     }
   };
 
-  const registrar = ({ nombre, apellido, email, password, rol }) => {
+  const registrar = ({ nombre, apellido, email, password, rol, id }) => {
     const todos = [...USUARIOS_MOCK, ...getRegistrados()];
     if (todos.find(u => u.email === email)) throw new Error('El email ya está registrado');
-    const nuevo = { id: Date.now(), nombre: `${nombre} ${apellido}`.trim(), email, password, rol, plan: 'Básico' };
+    const nuevo = { id: id ?? Date.now(), nombre: `${nombre} ${apellido}`.trim(), email, password, rol, plan: 'Básico' };
     localStorage.setItem('vetrural_usuarios_registrados', JSON.stringify([...getRegistrados(), nuevo]));
     return nuevo;
   };

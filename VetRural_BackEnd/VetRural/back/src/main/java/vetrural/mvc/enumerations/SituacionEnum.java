@@ -5,4 +5,5 @@ public enum SituacionEnum {
     Perdonada,
     Frigorífico,
     Apta_Servicio,
+    No_Aplica,
 }
