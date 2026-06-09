@@ -17,9 +17,7 @@ public class RegistrarBoqueoRequest {
     @NotNull
     private DientesEnum dientes;
 
-    @NotNull
     private DeterioroEnum deterioro;
 
-    @NotNull
     private DentaduraEnum dentadura;
 }

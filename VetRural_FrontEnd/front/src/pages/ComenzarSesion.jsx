@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useEstablecimiento } from '../context/EstablecimientoContext';
+import { useAuth } from '../context/AuthContext';
 import { getVeterinarios } from '../api/usuariosApi';
 import { Smile, Scale, Hand, Syringe } from 'lucide-react';
 
@@ -91,10 +92,9 @@ function VetCombobox({ vets, value, onChange, error }) {
         </div>
       </div>
 
-      {/* Matrícula del vet seleccionado */}
       {vetSel && (
         <p className="text-xs mt-1 font-semibold" style={{ color: 'var(--verde-medio)' }}>
-          ✓ Mat. {vetSel.matricula}
+          ✓ {vetSel.especialidad || 'Veterinario'}
         </p>
       )}
 
@@ -121,7 +121,7 @@ function VetCombobox({ vets, value, onChange, error }) {
                 style={{ padding: '0.75rem 1rem', display: 'block', border: 'none', background: 'none', cursor: 'pointer' }}
               >
                 <p className="text-sm font-semibold" style={{ color: 'var(--verde-oscuro)' }}>{v.nombre}</p>
-                <p className="text-xs" style={{ color: '#9CA3AF' }}>Mat. {v.matricula} · {v.especialidad}</p>
+                <p className="text-xs" style={{ color: '#9CA3AF' }}>{v.especialidad}</p>
               </button>
             ))
           )}
@@ -135,6 +135,7 @@ function VetCombobox({ vets, value, onChange, error }) {
 export default function ComenzarSesion() {
   const navigate = useNavigate();
   const { seleccionado } = useEstablecimiento();
+  const { usuario } = useAuth();
 
   const [trabajos,     setTrabajos]     = useState([]);
   const [vetId,        setVetId]        = useState('');
@@ -145,10 +146,19 @@ export default function ComenzarSesion() {
 
   useEffect(() => {
     getVeterinarios()
-      .then(setVets)
+      .then(lista => {
+        // Si el usuario logueado es veterinario y no está en la lista, lo agrega
+        if (usuario?.rol === 'veterinario') {
+          const yaEsta = lista.some(v => String(v.id) === String(usuario.id));
+          if (!yaEsta) {
+            lista = [{ id: usuario.id, nombre: usuario.nombre, email: usuario.email, matricula: '', especialidad: 'Veterinario' }, ...lista];
+          }
+        }
+        setVets(lista);
+      })
       .catch(() => setVets([]))
       .finally(() => setCargandoVets(false));
-  }, []);
+  }, [usuario]);
 
   const toggleTrabajo = (id) => {
     setError('');

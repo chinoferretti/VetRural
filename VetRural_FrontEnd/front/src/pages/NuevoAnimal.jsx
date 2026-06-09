@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { crearAnimal, getLotes, existeCaravana } from '../api/animalesApi';
+import { crearEstablecimiento } from '../api/establecimientosApi';
 import api from '../api/axios';
 import { useEstablecimiento } from '../context/EstablecimientoContext';
 import { useAuth } from '../context/AuthContext';
@@ -57,7 +58,8 @@ const INICIAL = {
   vac_brucelosis: '',
   vac_carbunco: '',
   vac_clostridial: '',
-  vac_ibr_bvd: '',
+  vac_ibr: '',
+  vac_bvd: '',
 };
 
 const inputCls = "w-full rounded-xl border bg-white";
@@ -95,6 +97,7 @@ export default function NuevoAnimal() {
   const [guardando, setGuardando] = useState(false);
   const [exito, setExito]         = useState(false);
   const [errores, setErrores]     = useState({});
+  const [errorSubmit, setErrorSubmit] = useState('');
   const [lotes, setLotes]         = useState(LOTES_DEFAULT);
   const [nuevoLote, setNuevoLote] = useState('');
   const [agregandoLote, setAgregandoLote] = useState(false);
@@ -144,16 +147,42 @@ const handleSubmit = async (e) => {
   if (Object.keys(e2).length) { setErrores(e2); return; }
   setGuardando(true);
   try {
-    // 1. Crear el animal
-    const animal = await crearAnimal({
-      caravana:          form.caravana,
-      sexo:              form.sexo,        // "Macho" o "Hembra" — ya coincide
-      nacimiento:        form.fechaNacimiento || null,
-      raza:              form.raza || null, // ahora coincide con el enum
-      tipo:              form.tipo || null, // ahora coincide con el enum
-      obs:               form.pelaje || null,
-      establecimientoId: seleccionado?.id ?? 1,
-    });
+    // Resolver establecimientoId: si es string (local) o numérico que no existe en backend, crearlo
+    let establecimientoId = seleccionado?.id;
+    if (typeof establecimientoId !== 'number') {
+      const est = await crearEstablecimiento(seleccionado.nombre);
+      establecimientoId = est.id;
+    }
+
+    // 1. Crear el animal (con retry si el establecimiento numérico no existe en el backend)
+    let animal;
+    try {
+      animal = await crearAnimal({
+        caravana:  form.caravana,
+        sexo:      form.sexo,
+        nacimiento: form.fechaNacimiento || null,
+        raza:      form.raza || null,
+        tipo:      form.tipo || null,
+        obs:       form.pelaje || null,
+        establecimientoId,
+      });
+    } catch (err404) {
+      if (err404?.response?.status === 404) {
+        const est = await crearEstablecimiento(seleccionado.nombre);
+        establecimientoId = est.id;
+        animal = await crearAnimal({
+          caravana:  form.caravana,
+          sexo:      form.sexo,
+          nacimiento: form.fechaNacimiento || null,
+          raza:      form.raza || null,
+          tipo:      form.tipo || null,
+          obs:       form.pelaje || null,
+          establecimientoId,
+        });
+      } else {
+        throw err404;
+      }
+    }
 
     const bovinoId = animal.id;
     const registradoPorId = usuario.id;
@@ -195,7 +224,8 @@ const handleSubmit = async (e) => {
       ['vac_brucelosis',  'Brucelosis'],
       ['vac_carbunco',    'Carbunco'],
       ['vac_clostridial', 'Clostridial'],
-      ['vac_ibr_bvd',     'IBR_BVD'],
+      ['vac_ibr',         'IBR'],
+      ['vac_bvd',         'BVD'],
     ];
     for (const [campo, vacuna] of vacunas) {
       if (form[campo]) {
@@ -204,9 +234,14 @@ const handleSubmit = async (e) => {
     }
 
     setExito(true);
-    setTimeout(() => navigate('/animales'), 1500);
+    setTimeout(() => navigate('/animales', { replace: true }), 1500);
   } catch (err) {
-    console.error(err);
+    const data = err?.response?.data;
+    const status = err?.response?.status;
+    const msg = data?.message || data?.error
+      || (typeof data === 'string' ? data : null)
+      || (status ? `Error ${status} del servidor` : 'Sin conexión con el servidor');
+    setErrorSubmit(msg);
   } finally {
     setGuardando(false);
   }
@@ -401,7 +436,8 @@ const handleSubmit = async (e) => {
             ['vac_brucelosis',  'Brucelosis'],
             ['vac_carbunco',    'Carbunco'],
             ['vac_clostridial', 'Clostridial'],
-            ['vac_ibr_bvd',     'IBR / BVD'],
+            ['vac_ibr',         'IBR'],
+            ['vac_bvd',         'BVD'],
           ].map(([campo, label]) => (
             <Field key={campo} label={label}>
               <input
@@ -415,6 +451,11 @@ const handleSubmit = async (e) => {
         </Seccion>
 
         {/* ── Acciones ── */}
+        {errorSubmit && (
+          <div className="rounded-2xl px-4 py-3 text-sm font-semibold" style={{ backgroundColor: '#FEE2E2', color: '#991B1B' }}>
+            {errorSubmit}
+          </div>
+        )}
         <div className="flex gap-4 pb-8">
           <button type="button" onClick={() => navigate(-1)} className="btn-secondary flex-1 justify-center">
             Cancelar

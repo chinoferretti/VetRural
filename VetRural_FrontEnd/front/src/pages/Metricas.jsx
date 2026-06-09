@@ -7,7 +7,7 @@ import { useEstablecimiento } from '../context/EstablecimientoContext';
 import { useAuth } from '../context/AuthContext';
 import { getMetricasEstablecimiento } from '../api/establecimientosApi';
 import LoadingSpinner from '../components/LoadingSpinner';
-import { PawPrint, Scale, Clock, Heart, CircleSlash, Users, Stethoscope, Syringe, AlertTriangle } from 'lucide-react';
+import { PawPrint, Scale, Clock, Heart, CircleSlash, Users, Stethoscope } from 'lucide-react';
 
 const SEXOS = ['Todos', 'Hembra', 'Macho'];
 
@@ -16,7 +16,8 @@ const VACUNAS_LABELS = {
   Brucelosis:  'Brucelosis',
   Carbunco:    'Carbunco',
   Clostridial: 'Clostridial',
-  IBR_BVD:     'IBR / BVD',
+  IBR:         'IBR',
+  BVD:         'BVD',
 };
 
 const MESES_ES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
@@ -141,15 +142,6 @@ export default function Metricas() {
       {/* ── Sección 1: Actividad de sesiones (desde localStorage) ── */}
       <section className="flex flex-col" style={{ gap: '1rem' }}>
         <SectionTitle>Actividad de sesiones</SectionTitle>
-
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard titulo="Sesiones realizadas"    valor={sesion.totalSesiones}     Icon={Stethoscope} />
-          <StatCard titulo="Animales atendidos"     valor={sesion.totalAtendidos}    Icon={PawPrint} />
-          <StatCard titulo="Tratamientos aplicados" valor={sesion.totalTratamientos} Icon={Syringe}
-            colorIcon={{ bg: '#EFF6FF', border: '#BFDBFE', icon: '#2563EB' }} />
-          <StatCard titulo="Alertas detectadas"     valor={sesion.totalOutliers}     Icon={AlertTriangle}
-            colorIcon={{ bg: '#FEF2F2', border: '#FECACA', icon: '#EF4444' }} />
-        </div>
 
         {sesion.evolucionPeso.length > 0 && (
           <div className="card" style={{ padding: '1.75rem' }}>

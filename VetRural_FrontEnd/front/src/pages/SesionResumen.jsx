@@ -21,6 +21,7 @@ const VACUNAS_LABELS = {
 };
 
 const DIST_LABELS = { cabeza: '< 3 meses', cuerpo: '3–6 meses', cola: '> 6 meses' };
+const DENTADURA_LABELS = { 'De_Leche': 'De leche', 'Mixta': 'Mixta', 'Permanente': 'Permanente' };
 
 // ── Helpers de UI ─────────────────────────────────────────────────────────────
 
@@ -72,15 +73,19 @@ function RowMetrica({ label, value, highlight }) {
 
 async function abrirShare(htmlContent, nombreArchivo, titulo) {
   const blob = new Blob([htmlContent], { type: 'text/html' });
-  const file = new File([blob], nombreArchivo, { type: 'text/html' });
-  if (navigator.share) {
-    const datos = navigator.canShare?.({ files: [file] })
-      ? { title: titulo, files: [file] }
-      : { title: titulo, text: titulo };
-    try { await navigator.share(datos); return; }
-    catch (e) { if (e.name === 'AbortError') return; }
-  }
   const url = URL.createObjectURL(blob);
+  if (navigator.share) {
+    const file = new File([blob], nombreArchivo, { type: 'text/html' });
+    const canFiles = navigator.canShare?.({ files: [file] });
+    try {
+      await navigator.share(canFiles ? { title: titulo, files: [file] } : { title: titulo, url });
+      URL.revokeObjectURL(url);
+      return;
+    } catch (e) {
+      URL.revokeObjectURL(url);
+      if (e.name === 'AbortError') return;
+    }
+  }
   window.open(url, '_blank');
   setTimeout(() => URL.revokeObjectURL(url), 15000);
 }
@@ -102,6 +107,9 @@ export default function SesionResumen() {
 
   useEffect(() => {
     if (!state?.registros) { navigate('/historial', { replace: true }); return; }
+    window.history.pushState({ sesionResumen: true }, '');
+    const onPop = () => navigate('/historial', { replace: true });
+    window.addEventListener('popstate', onPop);
     calcularMetricasApi(registros, trabajos).then(m => {
       setMetricas(m);
       try {
@@ -123,6 +131,7 @@ export default function SesionResumen() {
         localStorage.setItem(historialKey, JSON.stringify([sesion, ...previas]));
       } catch { /* sin espacio en disco */ }
     });
+    return () => window.removeEventListener('popstate', onPop);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!state?.registros || !metricas) {
@@ -167,7 +176,6 @@ export default function SesionResumen() {
         </div>
         <p className="text-sm" style={{ color: '#9CA3AF' }}>
           {fecha}{est ? ` · ${est}` : ''} · {veterinario}
-          {veterinarioMatricula ? ` (${veterinarioMatricula})` : ''}
           {anotador ? ` · ${anotador}` : ''}
         </p>
       </div>
@@ -185,7 +193,7 @@ export default function SesionResumen() {
       {/* Equipo + Trabajos */}
       <div className="card" style={{ padding: 'clamp(1rem, 3vw, 1.5rem)' }}>
         <div className="flex flex-col mb-3" style={{ gap: '0.4rem' }}>
-          <RowMetrica label="Veterinario" value={`${veterinario}${veterinarioMatricula ? ` — ${veterinarioMatricula}` : ''}`} />
+          <RowMetrica label="Veterinario" value={veterinario} />
           {anotador && <RowMetrica label="Anotador" value={anotador} />}
           {est && <RowMetrica label="Establecimiento" value={est} />}
         </div>
@@ -271,7 +279,7 @@ export default function SesionResumen() {
               <p className="text-xs font-semibold mb-2" style={{ color: '#6B7280' }}>Distribución dentaria</p>
               <ResponsiveContainer width="100%" height={120}>
                 <BarChart
-                  data={Object.entries(m.boqueo.conteos).map(([name, v]) => ({ name, v }))}
+                  data={Object.entries(m.boqueo.conteos).map(([name, v]) => ({ name: DENTADURA_LABELS[name] || name, v }))}
                   margin={{ top: 0, right: 10, bottom: 0, left: -20 }}
                 >
                   <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" />

@@ -125,7 +125,7 @@ export default function SesionRegistro() {
     peso: '',
     tacto_situacion: '', tacto_periodo: '',
     vac_aftosa: '', vac_brucelosis: '', vac_carbunco: '',
-    vac_clostridial: '', vac_ibr_bvd: '',
+    vac_clostridial: '', vac_ibr: '', vac_bvd: '',
   });
   const [guardando, setGuardando] = useState(false);
 
@@ -168,7 +168,8 @@ export default function SesionRegistro() {
       ['vac_brucelosis',  'Brucelosis'],
       ['vac_carbunco',    'Carbunco'],
       ['vac_clostridial', 'Clostridial'],
-      ['vac_ibr_bvd',     'IBR_BVD'],
+      ['vac_ibr',         'IBR'],
+      ['vac_bvd',         'BVD'],
     ];
     for (const [campo, vacuna] of vacunas) {
       if (tiene('vacunacion') && form[campo]) {
@@ -303,7 +304,8 @@ export default function SesionRegistro() {
             ['vac_brucelosis',  'Brucelosis'],
             ['vac_carbunco',    'Carbunco'],
             ['vac_clostridial', 'Clostridial'],
-            ['vac_ibr_bvd',    'IBR / BVD'],
+            ['vac_ibr',         'IBR'],
+            ['vac_bvd',         'BVD'],
           ].map(([campo, label]) => (
             <CampoVacuna key={campo} label={label} value={form[campo]} onChange={v => set(campo, v)} />
           ))}
@@ -321,7 +323,7 @@ export default function SesionRegistro() {
           className="w-full rounded-xl font-semibold transition-colors disabled:opacity-60"
           style={{ backgroundColor: '#F3F4F6', color: '#374151',
             padding: 'clamp(0.85rem, 2.5vw, 1.1rem)', fontSize: 'clamp(0.9rem, 2vw, 1rem)' }}>
-          {guardando ? 'Guardando...' : 'Terminar sesión'}
+          {guardando ? 'Guardando...' : 'Guardar y terminar sesión'}
         </button>
       </div>
 

@@ -1,3 +1,5 @@
+const DENTADURA_LABELS = { 'De_Leche': 'De leche', 'Mixta': 'Mixta', 'Permanente': 'Permanente' };
+
 // ── CSS bar helper ─────────────────────────────────────────────────────────────
 
 function barraCSS(pct, color = '#2d7a4f') {
@@ -101,7 +103,7 @@ export function generarHTMLReporte({
           <div style="font-size:12px;font-weight:bold;color:#1B4332;margin-bottom:8px">Distribución dentaria</div>
           ${Object.entries(b.conteos).map(([k, v]) => `<div style="margin:6px 0">
             <div style="display:flex;justify-content:space-between;font-size:12px">
-              <span>${k}</span><span><strong>${v}</strong> (${Math.round(v / totalB * 100)}%)</span>
+              <span>${DENTADURA_LABELS[k] || k}</span><span><strong>${v}</strong> (${Math.round(v / totalB * 100)}%)</span>
             </div>
             ${barraCSS((v / totalB) * 100)}
           </div>`).join('')}
@@ -113,7 +115,7 @@ export function generarHTMLReporte({
           </div>`).join('')}
         </div>` : ''}
         ${b.tasaReposicion > 0 ? `<div style="background:#fff3cd;border-radius:8px;padding:12px;border:1px solid #fde68a">
-          <p style="font-size:13px;font-weight:bold;color:#856404">Tasa de reposición: ${b.tasaReposicion}% — ${b.conteos['Permanente']} ${b.conteos['Permanente'] !== 1 ? 'animales' : 'animal'} con dentadura permanente</p>
+          <p style="font-size:13px;font-weight:bold;color:#856404">Tasa de reposición: ${b.tasaReposicion}% — ${b.conteos['Permanente'] || 0} ${(b.conteos['Permanente'] || 0) !== 1 ? 'animales' : 'animal'} con dentadura permanente</p>
         </div>` : ''}
       </section>`;
     }
@@ -296,9 +298,9 @@ export function calcularMetricasDesdeSesion(registros, trabajos) {
 
   let tacto = null;
   if (trabajos.includes('tacto')) {
-    const conteos = { Preñada: 0, Perdonada: 0, Frigorífico: 0, 'Apta servicio': 0 };
+    const conteos = { Preñada: 0, Perdonada: 0, Frigorífico: 0, Apta_Servicio: 0 };
     const dist = { cabeza: 0, cuerpo: 0, cola: 0 };
-    const PERIODO_MAP = { '-3 meses': 'cabeza', '3 a 6 meses': 'cuerpo', '+6 meses': 'cola' };
+    const PERIODO_MAP = { 'Menos_3_Meses': 'cabeza', 'Entre_3_y_6_Meses': 'cuerpo', 'Mas_6_Meses': 'cola' };
 
     registros.forEach(r => {
       if (r.form.tacto_situacion) {
@@ -315,7 +317,7 @@ export function calcularMetricasDesdeSesion(registros, trabajos) {
       prenadas:          conteos['Preñada'],
       perdonadas:        conteos['Perdonada'],
       frigorifico:       conteos['Frigorífico'],
-      aptaServicio:      conteos['Apta servicio'],
+      aptaServicio:      conteos['Apta_Servicio'],
       totalTactadas:     total,
       porcentajePreniez: total > 0 ? Math.round((conteos['Preñada'] / total) * 100) : 0,
       distribucion:      dist,
@@ -324,7 +326,7 @@ export function calcularMetricasDesdeSesion(registros, trabajos) {
 
   let boqueo = null;
   if (trabajos.includes('boqueo')) {
-    const conteos = { 'De leche': 0, 'Mixta': 0, 'Permanente': 0 };
+    const conteos = { 'De_Leche': 0, 'Mixta': 0, 'Permanente': 0 };
     const deterioro = { 'Leve': 0, 'Moderado': 0, 'Severo': 0 };
 
     registros.forEach(r => {

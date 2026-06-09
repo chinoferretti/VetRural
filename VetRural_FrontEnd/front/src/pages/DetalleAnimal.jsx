@@ -156,7 +156,8 @@ useEffect(() => {
               { value: 'Brucelosis',  label: 'Brucelosis' },
               { value: 'Carbunco',    label: 'Carbunco' },
               { value: 'Clostridial', label: 'Clostridial' },
-              { value: 'IBR_BVD',     label: 'IBR / BVD' },
+              { value: 'IBR',         label: 'IBR' },
+              { value: 'BVD',         label: 'BVD' },
             ].map(({ value, label }) => {
               const vac = vacunas.find(v => v.vacuna === value);
               return <Campo key={value} label={label} valor={vac ? formatFecha(vac.fechaHora) : null} />;

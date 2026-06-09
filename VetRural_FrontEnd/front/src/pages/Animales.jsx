@@ -104,14 +104,6 @@ export default function Animales() {
           <p className="text-lg font-semibold" style={{ color: '#374151' }}>
             {busqueda ? 'No se encontraron animales' : 'Este establecimiento no tiene animales registrados'}
           </p>
-          {!busqueda && (
-            <button
-              onClick={() => navigate('/animales/nuevo')}
-              className="btn-primary mt-4"
-            >
-              + Registrar primer animal
-            </button>
-          )}
         </div>
       ) : (
         <div className="flex flex-col gap-3">
