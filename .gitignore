@@ -17,6 +17,12 @@ dist/
 .env.production
 .env.development
 
+# Java build output
+target/
+*.class
+*.jar
+*.war
+
 # Python
 __pycache__/
 *.py[cod]
