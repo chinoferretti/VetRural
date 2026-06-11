@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useEstablecimiento } from '../context/EstablecimientoContext';
 import { useAuth } from '../context/AuthContext';
 import { getVeterinarios } from '../api/usuariosApi';
+import { sincronizarUsuario } from '../utils/usuarioSync';
 import { Smile, Scale, Hand, Syringe } from 'lucide-react';
 
 const TRABAJOS = [
@@ -145,19 +146,28 @@ export default function ComenzarSesion() {
   const [cargandoVets, setCargandoVets] = useState(true);
 
   useEffect(() => {
-    getVeterinarios()
-      .then(lista => {
-        // Si el usuario logueado es veterinario y no está en la lista, lo agrega
+    const cargar = async () => {
+      try {
+        let lista = await getVeterinarios();
         if (usuario?.rol === 'veterinario') {
-          const yaEsta = lista.some(v => String(v.id) === String(usuario.id));
-          if (!yaEsta) {
-            lista = [{ id: usuario.id, nombre: usuario.nombre, email: usuario.email, matricula: '', especialidad: 'Veterinario' }, ...lista];
+          try {
+            const backendId = await sincronizarUsuario(usuario);
+            const yaEsta = lista.some(v => String(v.id) === String(backendId));
+            if (!yaEsta) {
+              lista = [{ id: backendId, nombre: usuario.nombre, email: usuario.email, matricula: '', especialidad: 'Veterinario' }, ...lista];
+            }
+          } catch {
+            // Si no se puede sincronizar, el veterinario deberá buscarse de la lista
           }
         }
         setVets(lista);
-      })
-      .catch(() => setVets([]))
-      .finally(() => setCargandoVets(false));
+      } catch {
+        setVets([]);
+      } finally {
+        setCargandoVets(false);
+      }
+    };
+    cargar();
   }, [usuario]);
 
   const toggleTrabajo = (id) => {

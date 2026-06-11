@@ -130,6 +130,7 @@ export default function EditarAnimal() {
         setForm({
           caravana:        animal.caravana,
           sexo:            animal.sexo,
+          apodo:           animal.apodo      || '',
           fechaNacimiento: animal.nacimiento || '',
           lote:            animal.lote       || '',
           raza:            animal.raza       || '',
@@ -164,6 +165,7 @@ export default function EditarAnimal() {
       await actualizarAnimal(id, {
         caravana:          form.caravana,
         sexo:              form.sexo,
+        apodo:             form.apodo || null,
         nacimiento:        form.fechaNacimiento || null,
         lote:              form.lote || null,
         raza:              form.raza || null,
@@ -263,11 +265,13 @@ export default function EditarAnimal() {
           <CampoFijo label="Caravana electrónica" valor={form.caravana} />
           <CampoFijo label="Sexo" valor={form.sexo} />
 
-          <Field label="Tipo">
-            <select value={form.tipo} onChange={e => set('tipo', e.target.value)} className={inputCls} style={inputSty}>
-              <option value=""></option>
-              {tiposDisponibles.map(t => <option key={t}>{t}</option>)}
-            </select>
+          <Field label="Apodo">
+            <input
+              value={form.apodo}
+              onChange={e => set('apodo', e.target.value)}
+              placeholder="Ej: Manchita, El Toro..."
+              className={inputCls} style={inputSty}
+            />
           </Field>
 
           <Field label="Raza">
@@ -275,6 +279,19 @@ export default function EditarAnimal() {
               <option value=""></option>
               {RAZAS.map(r => <option key={r}>{r}</option>)}
             </select>
+          </Field>
+
+          <Field label="Tipo">
+            <select value={form.tipo} onChange={e => set('tipo', e.target.value)} className={inputCls} style={inputSty}>
+              <option value=""></option>
+              {tiposDisponibles.map(t => <option key={t}>{t}</option>)}
+            </select>
+          </Field>
+
+          <Field label="Pelaje">
+            <input value={form.pelaje} onChange={e => set('pelaje', e.target.value)}
+              placeholder="Ej: Negro entero, colorado overo..."
+              className={inputCls} style={inputSty} />
           </Field>
 
           <Field label="Lote">
@@ -313,12 +330,6 @@ export default function EditarAnimal() {
 
           <Field label="Fecha de nacimiento" nota="Opcional. Si no se conoce, el boqueo determinará la edad.">
             <input type="date" value={form.fechaNacimiento} onChange={e => set('fechaNacimiento', e.target.value)}
-              className={inputCls} style={inputSty} />
-          </Field>
-
-          <Field label="Pelaje">
-            <input value={form.pelaje} onChange={e => set('pelaje', e.target.value)}
-              placeholder="Ej: Negro entero, colorado overo..."
               className={inputCls} style={inputSty} />
           </Field>
         </Seccion>
@@ -382,8 +393,18 @@ export default function EditarAnimal() {
             ['vac_bvd',         'BVD'],
           ].map(([campo, label]) => (
             <Field key={campo} label={label} nota={notaClinico}>
-              <input type="date" value={form[campo]} onChange={e => set(campo, e.target.value)}
-                className={inputCls} style={inputSty} />
+              <div className="flex gap-2">
+                <input type="date" value={form[campo]} onChange={e => set(campo, e.target.value)}
+                  className={inputCls} style={{ ...inputSty, flex: 1 }} />
+                <button
+                  type="button"
+                  onClick={() => set(campo, new Date().toISOString().slice(0, 10))}
+                  className="flex-shrink-0 rounded-xl font-bold text-sm"
+                  style={{ backgroundColor: 'var(--verde-medio)', color: 'white', padding: '0 0.875rem' }}
+                >
+                  HOY
+                </button>
+              </div>
             </Field>
           ))}
         </Seccion>

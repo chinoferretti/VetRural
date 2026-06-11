@@ -1,5 +1,4 @@
 import api from './axios';
-import veterinariosData from '../data/veterinarios.json';
 
 // ── GET /usuarios/veterinarios ────────────────────────────────────────────────
 export async function getVeterinarios() {
@@ -13,7 +12,7 @@ export async function getVeterinarios() {
       especialidad: 'Veterinario',
     }));
   } catch {
-    return veterinariosData;
+    return [];
   }
 }
 

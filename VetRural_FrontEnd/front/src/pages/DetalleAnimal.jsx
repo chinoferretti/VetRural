@@ -1,67 +1,105 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { ArrowLeft, RefreshCw } from 'lucide-react';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { getAnimalById } from '../api/animalesApi';
-import { formatFecha } from '../utils/formatters';
 import api from '../api/axios';
 
-const TABS = [
-  { id: 'generales', label: 'Datos generales' },
-  { id: 'clinicos',  label: 'Datos clínicos'  },
-];
+function formatFechaHora(valor) {
+  if (!valor) return '—';
+  const d = new Date(Array.isArray(valor)
+    ? new Date(valor[0], valor[1] - 1, valor[2], valor[3] ?? 0, valor[4] ?? 0)
+    : valor);
+  if (isNaN(d.getTime())) return '—';
+  return d.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+}
 
-const TIPOS = ['Novillo', 'Novillito', 'Ternero', 'Vaquillona', 'Vaca', 'Torito', 'Toro'];
+function formatFechaLocal(valor) {
+  if (!valor) return '—';
+  const d = Array.isArray(valor)
+    ? new Date(valor[0], valor[1] - 1, valor[2])
+    : new Date(valor + 'T00:00:00');
+  if (isNaN(d.getTime())) return '—';
+  return d.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+}
 
 function Campo({ label, valor }) {
   return (
     <div className="flex flex-col gap-1">
-      <span className="text-sm font-medium" style={{ color: '#9CA3AF' }}>{label}</span>
+      <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: '#9CA3AF' }}>{label}</span>
       <span className="text-base font-semibold" style={{ color: '#111827' }}>{valor || '—'}</span>
     </div>
   );
 }
 
-function SeccionClinica({ titulo, icono, children }) {
+function Seccion({ titulo, icono, children, acento }) {
   return (
     <div className="card" style={{ padding: '1.5rem' }}>
-      <h3 className="font-bold text-lg mb-5 flex items-center gap-2" style={{ color: 'var(--verde-oscuro)' }}>
-        <span>{icono}</span> {titulo}
-      </h3>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+      <div className="flex items-center gap-2 mb-4" style={{ borderBottom: `2px solid ${acento || '#E5E7EB'}`, paddingBottom: '0.75rem' }}>
+        <span style={{ fontSize: '1.25rem' }}>{icono}</span>
+        <h3 className="font-bold text-base" style={{ color: 'var(--verde-oscuro)' }}>{titulo}</h3>
+      </div>
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-4">
         {children}
       </div>
     </div>
   );
 }
 
+const VACUNAS = [
+  { value: 'Aftosa',      label: 'Aftosa' },
+  { value: 'Brucelosis',  label: 'Brucelosis' },
+  { value: 'Carbunco',    label: 'Carbunco' },
+  { value: 'Clostridial', label: 'Clostridial' },
+  { value: 'IBR',         label: 'IBR' },
+  { value: 'BVD',         label: 'BVD' },
+];
+
+function formatEnum(valor) {
+  if (!valor) return '—';
+  return String(valor).replace(/_/g, ' ');
+}
+
 export default function DetalleAnimal() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [animal, setAnimal]       = useState(null);
-  const [eventos, setEventos]     = useState([]);  // ← NUEVO
-  const [cargando, setCargando]   = useState(true);
-  const [tabActiva, setTabActiva] = useState('generales');
 
-useEffect(() => {
-  Promise.all([
-    getAnimalById(id),
-    api.get(`/manga/${id}/ultimo-pesaje`).catch(() => ({ data: null })),
-    api.get(`/manga/${id}/ultimo-tacto`).catch(() => ({ data: null })),
-    api.get(`/manga/${id}/ultimo-boqueo`).catch(() => ({ data: null })),
-    api.get(`/manga/${id}/vacunaciones`).catch(() => ({ data: [] })),
-  ])
-    .then(([animalData, pesajeRes, tactoRes, boqueoRes, vacunasRes]) => {
+  const [animal,   setAnimal]   = useState(null);
+  const [pesaje,   setPesaje]   = useState(null);
+  const [tacto,    setTacto]    = useState(null);
+  const [boqueo,   setBoqueo]   = useState(null);
+  const [vacunas,  setVacunas]  = useState([]);
+  const [cargando, setCargando] = useState(true);
+  const [actualizando, setActualizando] = useState(false);
+  const [ultimaActualizacion, setUltimaActualizacion] = useState(null);
+
+  const cargarDatos = useCallback(async (silencioso = false) => {
+    if (!silencioso) setCargando(true);
+    else setActualizando(true);
+
+    try {
+      const [animalData, pesajeRes, tactoRes, boqueoRes, vacunasRes] = await Promise.all([
+        getAnimalById(id),
+        api.get(`/manga/${id}/ultimo-pesaje`).catch(() => ({ data: null })),
+        api.get(`/manga/${id}/ultimo-tacto`).catch(() => ({ data: null })),
+        api.get(`/manga/${id}/ultimo-boqueo`).catch(() => ({ data: null })),
+        api.get(`/manga/${id}/vacunaciones`).catch(() => ({ data: [] })),
+      ]);
       setAnimal(animalData);
-      setEventos({
-        pesaje:   pesajeRes.data,
-        tacto:    tactoRes.data,
-        boqueo:   boqueoRes.data,
-        vacunas:  vacunasRes.data || [],
-      });
+      setPesaje(pesajeRes.data);
+      setTacto(tactoRes.data);
+      setBoqueo(boqueoRes.data);
+      setVacunas(vacunasRes.data ?? []);
+      setUltimaActualizacion(new Date());
+    } catch {
+      setAnimal(null);
+    } finally {
       setCargando(false);
-    })
-    .catch(() => { setAnimal(null); setCargando(false); });
-}, [id]);
+      setActualizando(false);
+    }
+  }, [id]);
+
+  useEffect(() => { cargarDatos(); }, [cargarDatos]);
 
   if (cargando) return <LoadingSpinner texto="Cargando animal..." />;
 
@@ -75,98 +113,157 @@ useEffect(() => {
     );
   }
 
-  // Datos clínicos del animal (con fallback a vacío si no existen aún)
-  const ultimoPesaje = eventos.pesaje || {};
-  const ultimoTacto  = eventos.tacto  || {};
-  const ultimoBoqueo = eventos.boqueo || {};
-  const vacunas      = eventos.vacunas || [];
+  const horaActualizacion = ultimaActualizacion
+    ? ultimaActualizacion.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })
+    : null;
 
   return (
-    <div className="flex flex-col w-full" style={{ gap: '2rem' }}>
+    <div className="flex flex-col w-full" style={{ gap: '1.5rem' }}>
 
       {/* Header */}
-      <div>
-        <p className="text-sm font-medium mb-1" style={{ color: '#9CA3AF', fontFamily: 'monospace' }}>
-          {animal.caravana}
-        </p>
-        <h1 className="text-3xl font-bold" style={{ color: 'var(--verde-oscuro)' }}>
-          {animal.nombre || animal.caravana}
-        </h1>
-        <p className="mt-1" style={{ color: '#6B7280' }}>
-          {animal.especie} · {animal.raza}
-        </p>
-      </div>
-
-      {/* Tabs */}
-      <div style={{ borderBottom: '2px solid #E5E7EB' }}>
-        <div className="flex gap-1">
-          {TABS.map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setTabActiva(tab.id)}
-              className="px-6 py-3 font-semibold text-base border-b-2 transition-colors"
-              style={tabActiva === tab.id
-                ? { borderColor: 'var(--verde-medio)', color: 'var(--verde-medio)', marginBottom: '-2px' }
-                : { borderColor: 'transparent', color: '#9CA3AF' }
-              }
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* ── Tab: Datos generales ── */}
-      {tabActiva === 'generales' && (
-        <div className="card" style={{ padding: '1.75rem' }}>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-8 gap-y-7">
-            <Campo label="Identificador (caravana)" valor={animal.caravana} />
-            <Campo label="Fecha de nacimiento" valor={formatFecha(animal.nacimiento)} />
-            <Campo label="Sexo"                     valor={animal.sexo} />
-            <Campo label="Lote"                     valor={animal.lote} />
-            <Campo label="Raza"                     valor={animal.raza} />
-            <Campo label="Tipo"                valor={animal.tipo || '—'} />
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex items-start gap-3">
+          <button
+            onClick={() => navigate('/animales')}
+            className="flex items-center justify-center w-9 h-9 rounded-xl transition-colors hover:bg-white mt-1 flex-shrink-0"
+            style={{ border: '1.5px solid #E5E7EB', color: '#6B7280' }}
+          >
+            <ArrowLeft className="w-4 h-4" />
+          </button>
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-widest mb-0.5" style={{ color: '#9CA3AF', fontFamily: 'monospace' }}>
+              Caravana #{animal.caravana}
+            </p>
+            <h1 className="text-2xl font-bold" style={{ color: 'var(--verde-oscuro)' }}>
+              {animal.raza || '—'}
+            </h1>
+            <div className="flex flex-wrap gap-2 mt-1.5">
+              {animal.tipo && (
+                <span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={{ backgroundColor: '#EBF7F1', color: 'var(--verde-medio)' }}>
+                  {animal.tipo}
+                </span>
+              )}
+              {animal.sexo && (
+                <span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={{ backgroundColor: '#EEF2FF', color: '#4F46E5' }}>
+                  {animal.sexo}
+                </span>
+              )}
+              {animal.lote && (
+                <span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={{ backgroundColor: '#FEF3C7', color: '#92400E' }}>
+                  Lote {animal.lote}
+                </span>
+              )}
+            </div>
           </div>
         </div>
-      )}
 
-      {/* ── Tab: Datos clínicos ── */}
-      {tabActiva === 'clinicos' && (
-        <div className="flex flex-col gap-5">
+        <div className="flex flex-col items-end gap-1 flex-shrink-0">
+          <button
+            onClick={() => cargarDatos(true)}
+            disabled={actualizando}
+            className="flex items-center gap-1.5 btn-secondary"
+            style={{ fontSize: '0.8rem', padding: '0.5rem 0.875rem' }}
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${actualizando ? 'animate-spin' : ''}`} />
+            {actualizando ? 'Actualizando…' : 'Actualizar'}
+          </button>
+          {horaActualizacion && (
+            <p className="text-xs" style={{ color: '#9CA3AF' }}>Datos al {horaActualizacion}</p>
+          )}
+        </div>
+      </div>
+
+      {/* Grilla principal */}
+      <div className="flex flex-col gap-4">
+
+        {/* Información general */}
+        <Seccion titulo="Información general" icono="📋" acento="#95D5B2">
+          <Campo label="Caravana"   valor={animal.caravana} />
+          <Campo label="Sexo"       valor={animal.sexo} />
+          <Campo label="Apodo"      valor={animal.apodo} />
+          <Campo label="Raza"       valor={animal.raza} />
+          <Campo label="Tipo"       valor={animal.tipo} />
+          <Campo label="Pelaje"     valor={animal.observaciones} />
+          <Campo label="Lote"       valor={animal.lote} />
+          <Campo label="Nacimiento" valor={formatFechaLocal(animal.nacimiento)} />
+        </Seccion>
+
+        {/* Fila clínica: Pesaje + Tacto + Boqueo */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+
+          {/* Pesaje */}
+          <div className="card" style={{ padding: '1.5rem' }}>
+            <div className="flex items-center gap-2 mb-4" style={{ borderBottom: '2px solid #DBEAFE', paddingBottom: '0.75rem' }}>
+              <span style={{ fontSize: '1.25rem' }}>⚖️</span>
+              <h3 className="font-bold text-base" style={{ color: 'var(--verde-oscuro)' }}>Último pesaje</h3>
+            </div>
+            {pesaje ? (
+              <div className="flex flex-col gap-3">
+                <div>
+                  <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: '#9CA3AF' }}>Peso</span>
+                  <p className="text-3xl font-bold mt-1" style={{ color: '#1D4ED8' }}>
+                    {pesaje.peso} <span className="text-lg font-semibold" style={{ color: '#6B7280' }}>kg</span>
+                  </p>
+                </div>
+                <div>
+                  <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: '#9CA3AF' }}>Fecha</span>
+                  <p className="text-sm font-semibold mt-0.5" style={{ color: '#374151' }}>{formatFechaHora(pesaje.fechaHora)}</p>
+                </div>
+              </div>
+            ) : (
+              <p className="text-sm" style={{ color: '#9CA3AF' }}>Sin registros</p>
+            )}
+          </div>
+
+          {/* Tacto */}
+          <div className="card" style={{ padding: '1.5rem' }}>
+            <div className="flex items-center gap-2 mb-4" style={{ borderBottom: '2px solid #EDE9FE', paddingBottom: '0.75rem' }}>
+              <span style={{ fontSize: '1.25rem' }}>🔍</span>
+              <h3 className="font-bold text-base" style={{ color: 'var(--verde-oscuro)' }}>Último tacto</h3>
+            </div>
+            {tacto ? (
+              <div className="flex flex-col gap-3">
+                <Campo label="Situación" valor={tacto.situacion?.replace(/_/g, ' ')} />
+                {tacto.situacion === 'Preñada' && (
+                  <Campo label="Período" valor={tacto.periodo?.replace(/_/g, ' ')} />
+                )}
+                <Campo label="Fecha" valor={formatFechaHora(tacto.fechaHora)} />
+              </div>
+            ) : (
+              <p className="text-sm" style={{ color: '#9CA3AF' }}>Sin registros</p>
+            )}
+          </div>
 
           {/* Boqueo */}
-          <SeccionClinica titulo="Boqueo" icono="🦷">
-            <Campo label="Cantidad de dientes" valor={ultimoBoqueo.dientes} />
-            <Campo label="Deterioro"           valor={ultimoBoqueo.deterioro} />
-            <Campo label="Tipo de dentadura"   valor={ultimoBoqueo.dentadura} />
-          </SeccionClinica>
-
-          <SeccionClinica titulo="Pesaje" icono="⚖️">
-            <Campo label="Peso del animal" valor={ultimoPesaje.peso ? `${ultimoPesaje.peso} kg` : null} />
-          </SeccionClinica>
-
-          <SeccionClinica titulo="Tacto" icono="🔍">
-            <Campo label="Situación" valor={ultimoTacto.situacion} />
-            <Campo label="Período"   valor={ultimoTacto.situacion === 'Preñada' ? (ultimoTacto.periodo || '—') : '—'} />
-          </SeccionClinica>
-
-          <SeccionClinica titulo="Vacunación" icono="💉">
-            {[
-              { value: 'Aftosa',      label: 'Aftosa' },
-              { value: 'Brucelosis',  label: 'Brucelosis' },
-              { value: 'Carbunco',    label: 'Carbunco' },
-              { value: 'Clostridial', label: 'Clostridial' },
-              { value: 'IBR',         label: 'IBR' },
-              { value: 'BVD',         label: 'BVD' },
-            ].map(({ value, label }) => {
-              const vac = vacunas.find(v => v.vacuna === value);
-              return <Campo key={value} label={label} valor={vac ? formatFecha(vac.fechaHora) : null} />;
-            })}
-          </SeccionClinica>
+          <div className="card" style={{ padding: '1.5rem' }}>
+            <div className="flex items-center gap-2 mb-4" style={{ borderBottom: '2px solid #FEF3C7', paddingBottom: '0.75rem' }}>
+              <span style={{ fontSize: '1.25rem' }}>🦷</span>
+              <h3 className="font-bold text-base" style={{ color: 'var(--verde-oscuro)' }}>Último boqueo</h3>
+            </div>
+            {boqueo ? (
+              <div className="flex flex-col gap-3">
+                <Campo label="Dientes"       valor={formatEnum(boqueo.dientes)} />
+                <Campo label="Deterioro"     valor={formatEnum(boqueo.deterioro)} />
+                <Campo label="Dentadura"     valor={formatEnum(boqueo.dentadura)} />
+                <Campo label="Fecha"         valor={formatFechaHora(boqueo.fechaHora)} />
+              </div>
+            ) : (
+              <p className="text-sm" style={{ color: '#9CA3AF' }}>Sin registros</p>
+            )}
+          </div>
 
         </div>
-      )}
 
+        {/* Vacunaciones */}
+        <Seccion titulo="Vacunaciones (última aplicación)" icono="💉" acento="#D1FAE5">
+          {VACUNAS.map(({ value, label }) => {
+            const vac = vacunas.filter(v => v.vacuna === value)
+              .sort((a, b) => new Date(b.fechaHora) - new Date(a.fechaHora))[0];
+            return <Campo key={value} label={label} valor={vac ? formatFechaHora(vac.fechaHora) : null} />;
+          })}
+        </Seccion>
+
+      </div>
     </div>
   );
 }

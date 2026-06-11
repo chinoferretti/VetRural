@@ -121,14 +121,40 @@ export default function SesionRegistro() {
   const esMacho = animal.sexo === 'Macho';
   const trabajosEfectivos = trabajos.filter(t => !(t === 'tacto' && esMacho));
 
-  const [form, setForm] = useState({
+  const TIPOS_HEMBRA = ['Ternera', 'Vaquillona', 'Vaca'];
+  const TIPOS_MACHO  = ['Ternero', 'Novillito', 'Novillo', 'Torito', 'Toro'];
+  const tiposDisponibles = esMacho ? TIPOS_MACHO : TIPOS_HEMBRA;
+
+  const [tipoAnimal, setTipoAnimal] = useState(animal.tipo || '');
+  const [form, setForm] = useState(() => ({
     boqueo_dientes: '', boqueo_deterioro: '', boqueo_dentadura: '',
     peso: '',
-    tacto_situacion: '', tacto_periodo: '',
+    tacto_situacion: (!esMacho && animal.tipo === 'Ternera') ? 'No_Aplica' : '',
+    tacto_periodo: '',
     vac_aftosa: '', vac_brucelosis: '', vac_carbunco: '',
     vac_clostridial: '', vac_ibr: '', vac_bvd: '',
-  });
+  }));
   const [guardando, setGuardando] = useState(false);
+  const [errorGuardado, setErrorGuardado] = useState('');
+
+  const handleTipoChange = (nuevoTipo) => {
+    setTipoAnimal(nuevoTipo);
+    if (!esMacho && nuevoTipo === 'Ternera') {
+      setForm(f => ({ ...f, tacto_situacion: 'No_Aplica', tacto_periodo: '' }));
+    } else if (!esMacho && tipoAnimal === 'Ternera') {
+      setForm(f => ({ ...f, tacto_situacion: '', tacto_periodo: '' }));
+    }
+    api.put(`/bovinos/${animal.id}`, {
+      caravana: animal.caravana, sexo: animal.sexo,
+      establecimientoId: animal.establecimientoId,
+      nacimiento: animal.nacimiento || null,
+      lote: animal.lote || null,
+      raza: animal.raza || null,
+      tipo: nuevoTipo || null,
+      obs: animal.observaciones || null,
+      apodo: animal.apodo || null,
+    }).catch(() => {});
+  };
 
   const set   = (campo, valor) => setForm(f => ({ ...f, [campo]: valor }));
   const tiene = (t) => trabajosEfectivos.includes(t);
@@ -180,25 +206,43 @@ export default function SesionRegistro() {
       }
     }
 
-    await Promise.allSettled(promises);
+    const resultados = await Promise.allSettled(promises);
+    const fallidos = resultados.filter(r => r.status === 'rejected');
+    if (fallidos.length > 0) {
+      const primer = fallidos[0].reason;
+      const msg = primer?.response?.data?.error || primer?.message || 'Error al guardar datos';
+      throw new Error(msg);
+    }
   };
 
   const handleSiguiente = async () => {
     setGuardando(true);
-    await guardarEventos();
-    setGuardando(false);
-    const registro = { animal, trabajosEfectivos, form };
-    const registros = [...(state.registros || []), registro];
-    navigate('/sesion/animal', { state: { ...state, registros }, replace: true });
+    setErrorGuardado('');
+    try {
+      await guardarEventos();
+      const registro = { animal, trabajosEfectivos, form };
+      const registros = [...(state.registros || []), registro];
+      navigate('/sesion/animal', { state: { ...state, registros }, replace: true });
+    } catch (err) {
+      setErrorGuardado(err.message || 'Error al guardar. Intentá de nuevo.');
+    } finally {
+      setGuardando(false);
+    }
   };
 
   const handleFinalizar = async () => {
     setGuardando(true);
-    await guardarEventos();
-    setGuardando(false);
-    const registro = { animal, trabajosEfectivos, form };
-    const registros = [...(state.registros || []), registro];
-    navigate('/sesion/resumen', { state: { ...state, registros }, replace: true });
+    setErrorGuardado('');
+    try {
+      await guardarEventos();
+      const registro = { animal, trabajosEfectivos, form };
+      const registros = [...(state.registros || []), registro];
+      navigate('/sesion/resumen', { state: { ...state, registros }, replace: true });
+    } catch (err) {
+      setErrorGuardado(err.message || 'Error al guardar. Intentá de nuevo.');
+    } finally {
+      setGuardando(false);
+    }
   };
 
   const cancelarSesion = () => navigate('/dashboard', { replace: true });
@@ -238,6 +282,24 @@ export default function SesionRegistro() {
           style={{ backgroundColor: '#FEE2E2', color: '#EF4444', fontSize: 'clamp(0.875rem, 2vw, 1rem)' }}>
           Cancelar
         </button>
+      </div>
+
+      {/* Tipo */}
+      <div className="card" style={{ padding: 'clamp(1rem, 3vw, 1.5rem)' }}>
+        <h2 className="font-bold mb-4"
+          style={{ color: 'var(--verde-oscuro)', fontSize: 'clamp(1rem, 2.5vw, 1.2rem)' }}>
+          Tipo de animal
+        </h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-semibold" style={{ color: '#374151' }}>Tipo</label>
+            <select value={tipoAnimal} onChange={e => handleTipoChange(e.target.value)}
+              className={inputCls} style={inputSty}>
+              <option value=""></option>
+              {tiposDisponibles.map(t => <option key={t}>{t}</option>)}
+            </select>
+          </div>
+        </div>
       </div>
 
       {/* Secciones */}
@@ -280,11 +342,19 @@ export default function SesionRegistro() {
       {tiene('tacto') && (
         <Seccion titulo="Tacto" Icon={Hand}>
           <Campo label="Situación">
-            <select value={form.tacto_situacion} onChange={e => set('tacto_situacion', e.target.value)}
-              className={inputCls} style={inputSty}>
-              <option value=""></option>
+            <select
+              value={form.tacto_situacion}
+              onChange={e => set('tacto_situacion', e.target.value)}
+              disabled={tipoAnimal === 'Ternera'}
+              className={inputCls}
+              style={{ ...inputSty, ...(tipoAnimal === 'Ternera' ? { backgroundColor: '#F9FAFB', color: '#6B7280', cursor: 'not-allowed' } : {}) }}
+            >
+              {tipoAnimal !== 'Ternera' && <option value=""></option>}
               {SITUACIONES_TACTO.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
             </select>
+            {tipoAnimal === 'Ternera' && (
+              <p className="text-xs mt-1" style={{ color: '#9CA3AF' }}>Las terneras se registran como "No aplica"</p>
+            )}
           </Campo>
           {form.tacto_situacion === 'Preñada' && (
             <Campo label="Período">
@@ -313,18 +383,19 @@ export default function SesionRegistro() {
         </Seccion>
       )}
 
+      {/* Error de guardado */}
+      {errorGuardado && (
+        <div className="rounded-xl px-4 py-3 text-sm font-medium" style={{ backgroundColor: '#FEE2E2', color: '#991B1B', flexShrink: 0 }}>
+          ⚠️ {errorGuardado}
+        </div>
+      )}
+
       {/* Acciones */}
       <div className="flex flex-col gap-3 pb-4" style={{ flexShrink: 0 }}>
         <button onClick={handleSiguiente} disabled={guardando}
           className="btn-primary w-full disabled:opacity-60"
           style={{ padding: 'clamp(0.85rem, 2.5vw, 1.1rem)', fontSize: 'clamp(0.95rem, 2.5vw, 1.1rem)' }}>
           {guardando ? 'Guardando...' : 'Guardar y siguiente →'}
-        </button>
-        <button onClick={handleFinalizar} disabled={guardando}
-          className="w-full rounded-xl font-semibold transition-colors disabled:opacity-60"
-          style={{ backgroundColor: '#F3F4F6', color: '#374151',
-            padding: 'clamp(0.85rem, 2.5vw, 1.1rem)', fontSize: 'clamp(0.9rem, 2vw, 1rem)' }}>
-          {guardando ? 'Guardando...' : 'Guardar y terminar sesión'}
         </button>
       </div>
 

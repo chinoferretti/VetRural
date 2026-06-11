@@ -10,9 +10,9 @@ import java.util.List;
 import java.util.Optional;
 
 public interface BovinoService {
-    Bovino crearBovino(String caravana, Long establecimientoId, LocalDate nacimiento, SexoEnum sexo, String obs, RazaBovinoEnum raza, TipoBovinoEnum tipo);
+    Bovino crearBovino(String caravana, Long establecimientoId, LocalDate nacimiento, SexoEnum sexo, String obs, String apodo, RazaBovinoEnum raza, TipoBovinoEnum tipo);
     Bovino crearBovinoRapido(String caravana, Long establecimientoId, SexoEnum sexo);
-    Bovino actualizarBovino(Long id, String caravana, Long establecimientoId, LocalDate nacimiento, SexoEnum sexo, String lote, RazaBovinoEnum raza, TipoBovinoEnum tipo, String obs);
+    Bovino actualizarBovino(Long id, String caravana, Long establecimientoId, LocalDate nacimiento, SexoEnum sexo, String lote, RazaBovinoEnum raza, TipoBovinoEnum tipo, String obs, String apodo);
     void eliminarBovino(Long id);
     boolean existePorCaravana(String caravana);
     Optional<Bovino> getBovino(Long id);

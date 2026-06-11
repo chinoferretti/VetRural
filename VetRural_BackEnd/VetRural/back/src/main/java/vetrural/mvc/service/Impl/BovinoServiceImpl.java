@@ -47,7 +47,7 @@ public class BovinoServiceImpl implements BovinoService {
     private BoqueoService boqueoService;
 
     @Override
-    public Bovino crearBovino(String caravana, Long establecimientoId, LocalDate nacimiento, SexoEnum sexo, String obs, RazaBovinoEnum raza, TipoBovinoEnum tipo) {
+    public Bovino crearBovino(String caravana, Long establecimientoId, LocalDate nacimiento, SexoEnum sexo, String obs, String apodo, RazaBovinoEnum raza, TipoBovinoEnum tipo) {
         if (bovinoRepository.existsByCaravana(caravana)) {
             throw new IllegalArgumentException("Ya existe un bovino con caravana: " + caravana);
         }
@@ -58,6 +58,7 @@ public class BovinoServiceImpl implements BovinoService {
         bovino.setNacimiento(nacimiento);
         bovino.setSexo(sexo);
         bovino.setObservaciones(obs);
+        bovino.setApodo(apodo);
         bovino.setRaza(raza);
         bovino.setTipo(tipo);
         return bovinoRepository.save(bovino);
@@ -157,7 +158,7 @@ public class BovinoServiceImpl implements BovinoService {
     }
 
     @Override
-    public Bovino actualizarBovino(Long id, String caravana, Long establecimientoId, LocalDate nacimiento, SexoEnum sexo, String lote, RazaBovinoEnum raza, TipoBovinoEnum tipo, String obs) {
+    public Bovino actualizarBovino(Long id, String caravana, Long establecimientoId, LocalDate nacimiento, SexoEnum sexo, String lote, RazaBovinoEnum raza, TipoBovinoEnum tipo, String obs, String apodo) {
         Bovino bovino = obtenerOFallar(id);
         if (caravana != null && !caravana.equals(bovino.getCaravana())) {
             if (bovinoRepository.existsByCaravana(caravana)) {
@@ -174,6 +175,7 @@ public class BovinoServiceImpl implements BovinoService {
         bovino.setRaza(raza);
         bovino.setTipo(tipo);
         bovino.setObservaciones(obs);
+        bovino.setApodo(apodo);
         return bovinoRepository.save(bovino);
     }
 

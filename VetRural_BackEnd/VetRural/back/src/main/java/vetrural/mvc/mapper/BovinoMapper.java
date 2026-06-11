@@ -17,7 +17,8 @@ public final class BovinoMapper {
                 b.getSexo(),
                 b.getNacimiento(),
                 b.getLote(),
-                b.getObservaciones()
+                b.getObservaciones(),
+                b.getApodo()
         );
     }
 }

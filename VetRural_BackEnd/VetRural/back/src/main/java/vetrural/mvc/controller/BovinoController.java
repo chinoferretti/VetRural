@@ -60,6 +60,7 @@ public class BovinoController {
                 req.getNacimiento(),
                 req.getSexo(),
                 req.getObs(),
+                req.getApodo(),
                 req.getRaza(),
                 req.getTipo()
         );
@@ -91,7 +92,8 @@ public class BovinoController {
                 req.getLote(),
                 req.getRaza(),
                 req.getTipo(),
-                req.getObs()
+                req.getObs(),
+                req.getApodo()
         );
         return ResponseEntity.ok(BovinoMapper.toResponse(bovino));
     }

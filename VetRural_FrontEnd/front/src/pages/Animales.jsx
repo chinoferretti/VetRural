@@ -26,7 +26,7 @@ export default function Animales() {
   const filtrados = useMemo(() => animales.filter(a => {
     if (!busqueda) return true;
     const q = busqueda.toLowerCase();
-    return a.caravana.toLowerCase().includes(q) || a.nombre?.toLowerCase().includes(q);
+    return a.caravana.toLowerCase().includes(q) || a.apodo?.toLowerCase().includes(q);
   }), [animales, busqueda]);
 
   const eliminar = async (id) => {
@@ -90,7 +90,7 @@ export default function Animales() {
       {/* Búsqueda */}
       <input
         type="text"
-        placeholder="Buscar por caravana..."
+        placeholder="Buscar por caravana o apodo..."
         value={busqueda}
         onChange={e => setBusqueda(e.target.value)}
         className="w-full rounded-2xl border bg-white"

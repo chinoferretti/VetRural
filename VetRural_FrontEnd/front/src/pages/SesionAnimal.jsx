@@ -218,6 +218,23 @@ export default function SesionAnimal() {
           style={{ maxWidth: '480px', padding: 'clamp(0.9rem, 2.5vw, 1.2rem)', fontSize: 'clamp(1rem, 2.5vw, 1.2rem)' }}>
           {buscando ? 'Buscando...' : 'Buscar'}
         </button>
+
+        <button
+          onClick={() => navigate('/sesion/resumen', { state: sesion, replace: true })}
+          className="w-full rounded-xl font-semibold"
+          style={{
+            maxWidth: '480px',
+            padding: 'clamp(0.75rem, 2vw, 1rem)',
+            fontSize: 'clamp(0.9rem, 2vw, 1rem)',
+            backgroundColor: '#F0FDF4',
+            color: 'var(--verde-oscuro)',
+            border: '1.5px solid #86EFAC',
+          }}
+        >
+          {(sesion.registros?.length ?? 0) > 0
+            ? `Terminar sesión (${sesion.registros.length} ${sesion.registros.length === 1 ? 'animal' : 'animales'})`
+            : 'Terminar sesión'}
+        </button>
       </div>
 
       {/* Modal nuevo animal */}

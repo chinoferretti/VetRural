@@ -38,4 +38,5 @@ public class Bovino {
     private LocalDate nacimiento;
     private String lote;
     private String observaciones;
+    private String apodo;
 }

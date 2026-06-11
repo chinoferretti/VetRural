@@ -16,4 +16,5 @@ public class ActualizarBovinoRequest {
     private RazaBovinoEnum raza;
     private TipoBovinoEnum tipo;
     private String obs;
+    private String apodo;
 }

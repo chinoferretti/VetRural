@@ -19,10 +19,8 @@ public class Boqueo extends EventoSanitario {
     private DientesEnum dientes;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
     private DeterioroEnum deterioro;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
     private DentaduraEnum dentadura;
 }

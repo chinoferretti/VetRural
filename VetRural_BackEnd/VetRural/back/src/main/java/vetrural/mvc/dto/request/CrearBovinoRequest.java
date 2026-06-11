@@ -21,6 +21,7 @@ public class CrearBovinoRequest {
 
     private LocalDate nacimiento;
     private String obs;
+    private String apodo;
     private RazaBovinoEnum raza;
     private TipoBovinoEnum tipo;
 }

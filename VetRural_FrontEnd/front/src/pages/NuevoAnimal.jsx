@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { crearAnimal, getLotes, existeCaravana } from '../api/animalesApi';
 import { crearEstablecimiento, asociarUsuario } from '../api/establecimientosApi';
 import api from '../api/axios';
+import { sincronizarUsuario } from '../utils/usuarioSync';
 import { useEstablecimiento } from '../context/EstablecimientoContext';
 import { useAuth } from '../context/AuthContext';
 
@@ -41,6 +42,7 @@ const INICIAL = {
   caravana: '',
   sexo: 'Hembra',
   // Generales opcionales
+  apodo: '',
   fechaNacimiento: '',
   lote: '',
   raza: '',
@@ -169,6 +171,7 @@ const handleSubmit = async (e) => {
         raza:      form.raza || null,
         tipo:      form.tipo || null,
         obs:       form.pelaje || null,
+        apodo:     form.apodo || null,
         establecimientoId,
       });
     } catch (err404) {
@@ -185,6 +188,7 @@ const handleSubmit = async (e) => {
           raza:      form.raza || null,
           tipo:      form.tipo || null,
           obs:       form.pelaje || null,
+          apodo:     form.apodo || null,
           establecimientoId,
         });
       } else {
@@ -193,7 +197,12 @@ const handleSubmit = async (e) => {
     }
 
     const bovinoId = animal.id;
-    const registradoPorId = usuario.id;
+    let registradoPorId;
+    try {
+      registradoPorId = await sincronizarUsuario(usuario);
+    } catch {
+      throw new Error('No se pudo verificar el usuario en el servidor. Verificá que el backend esté corriendo.');
+    }
 
     // 2. Lote (si seleccionó uno)
     if (form.lote) {
@@ -302,7 +311,12 @@ const handleSubmit = async (e) => {
               onChange={e => {
                 const nuevoSexo = e.target.value;
                 const tiposValidos = nuevoSexo === 'Hembra' ? TIPOS_HEMBRA : TIPOS_MACHO;
-                setForm(f => ({ ...f, sexo: nuevoSexo, tipo: tiposValidos.includes(f.tipo) ? f.tipo : '' }));
+                setForm(f => ({
+                  ...f,
+                  sexo: nuevoSexo,
+                  tipo: tiposValidos.includes(f.tipo) ? f.tipo : '',
+                  ...(nuevoSexo === 'Macho' ? { tacto_situacion: '', tacto_periodo: '' } : {}),
+                }));
                 setErrores(er => ({ ...er, sexo: undefined }));
               }}
               className={inputCls}
@@ -313,11 +327,14 @@ const handleSubmit = async (e) => {
             </select>
           </Field>
 
-          <Field label="Tipo">
-            <select value={form.tipo} onChange={e => set('tipo', e.target.value)} className={inputCls} style={inputSty}>
-              <option value=""></option>
-              {(form.sexo === 'Hembra' ? TIPOS_HEMBRA : TIPOS_MACHO).map(t => <option key={t}>{t}</option>)}
-            </select>
+          <Field label="Apodo">
+            <input
+              value={form.apodo}
+              onChange={e => set('apodo', e.target.value)}
+              placeholder="Ej: Manchita, El Toro..."
+              className={inputCls}
+              style={inputSty}
+            />
           </Field>
 
           <Field label="Raza">
@@ -325,6 +342,38 @@ const handleSubmit = async (e) => {
               <option value=""></option>
               {RAZAS.map(r => <option key={r}>{r}</option>)}
             </select>
+          </Field>
+
+          <Field label="Tipo">
+            <select
+              value={form.tipo}
+              onChange={e => {
+                const nuevoTipo = e.target.value;
+                setForm(f => ({
+                  ...f,
+                  tipo: nuevoTipo,
+                  tacto_situacion: f.sexo === 'Hembra' && nuevoTipo === 'Ternera'
+                    ? 'No_Aplica'
+                    : (f.tacto_situacion === 'No_Aplica' && f.tipo === 'Ternera' ? '' : f.tacto_situacion),
+                  tacto_periodo: nuevoTipo === 'Ternera' ? '' : f.tacto_periodo,
+                }));
+              }}
+              className={inputCls}
+              style={inputSty}
+            >
+              <option value=""></option>
+              {(form.sexo === 'Hembra' ? TIPOS_HEMBRA : TIPOS_MACHO).map(t => <option key={t}>{t}</option>)}
+            </select>
+          </Field>
+
+          <Field label="Pelaje">
+            <input
+              value={form.pelaje}
+              onChange={e => set('pelaje', e.target.value)}
+              placeholder="Ej: Negro entero, colorado overo..."
+              className={inputCls}
+              style={inputSty}
+            />
           </Field>
 
           <Field label="Lote">
@@ -374,16 +423,6 @@ const handleSubmit = async (e) => {
               style={inputSty}
             />
           </Field>
-
-          <Field label="Pelaje">
-            <input
-              value={form.pelaje}
-              onChange={e => set('pelaje', e.target.value)}
-              placeholder="Ej: Negro entero, colorado overo..."
-              className={inputCls}
-              style={inputSty}
-            />
-          </Field>
         </Seccion>
 
         {/* ── Boqueo ── */}
@@ -423,24 +462,40 @@ const handleSubmit = async (e) => {
           </Field>
         </Seccion>
 
-        {/* ── Tacto ── */}
-        <Seccion titulo="Tacto" icono="🔍">
-          <Field label="Situación">
-            <select value={form.tacto_situacion} onChange={e => set('tacto_situacion', e.target.value)} className={inputCls} style={inputSty}>
-              <option value=""></option>
-              {SITUACIONES_TACTO.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
-            </select>
-          </Field>
-
-          {form.tacto_situacion === 'Preñada' && (
-            <Field label="Período de preñez">
-              <select value={form.tacto_periodo} onChange={e => set('tacto_periodo', e.target.value)} className={inputCls} style={inputSty}>
-                <option value=""></option>
-                {PERIODOS_PRENEZ.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
+        {/* ── Tacto (solo hembras) ── */}
+        {form.sexo === 'Hembra' && (
+          <Seccion titulo="Tacto" icono="🔍">
+            <Field label="Situación">
+              <select
+                value={form.tacto_situacion}
+                onChange={e => set('tacto_situacion', e.target.value)}
+                disabled={form.tipo === 'Ternera'}
+                className={inputCls}
+                style={{
+                  ...inputSty,
+                  ...(form.tipo === 'Ternera' ? { backgroundColor: '#F9FAFB', color: '#6B7280', cursor: 'not-allowed' } : {}),
+                }}
+              >
+                {form.tipo !== 'Ternera' && <option value=""></option>}
+                {SITUACIONES_TACTO.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
               </select>
+              {form.tipo === 'Ternera' && (
+                <p className="text-xs mt-1" style={{ color: '#9CA3AF' }}>
+                  Las terneras se registran automáticamente como "No aplica"
+                </p>
+              )}
             </Field>
-          )}
-        </Seccion>
+
+            {form.tacto_situacion === 'Preñada' && (
+              <Field label="Período de preñez">
+                <select value={form.tacto_periodo} onChange={e => set('tacto_periodo', e.target.value)} className={inputCls} style={inputSty}>
+                  <option value=""></option>
+                  {PERIODOS_PRENEZ.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
+                </select>
+              </Field>
+            )}
+          </Seccion>
+        )}
 
         {/* ── Vacunación ── */}
         <Seccion titulo="Vacunación — Última dosis" icono="💉">
@@ -453,12 +508,22 @@ const handleSubmit = async (e) => {
             ['vac_bvd',         'BVD'],
           ].map(([campo, label]) => (
             <Field key={campo} label={label}>
-              <input
-                type="date"
-                value={form[campo]}
-                onChange={e => set(campo, e.target.value)}
-                className={inputCls} style={inputSty}
-              />
+              <div className="flex gap-2">
+                <input
+                  type="date"
+                  value={form[campo]}
+                  onChange={e => set(campo, e.target.value)}
+                  className={inputCls} style={{ ...inputSty, flex: 1 }}
+                />
+                <button
+                  type="button"
+                  onClick={() => set(campo, new Date().toISOString().slice(0, 10))}
+                  className="flex-shrink-0 rounded-xl font-bold text-sm"
+                  style={{ backgroundColor: 'var(--verde-medio)', color: 'white', padding: '0 0.875rem' }}
+                >
+                  HOY
+                </button>
+              </div>
             </Field>
           ))}
         </Seccion>

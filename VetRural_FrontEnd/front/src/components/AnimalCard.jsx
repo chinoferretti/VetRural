@@ -1,11 +1,15 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Pencil, Trash2, Tag } from 'lucide-react';
+import { Pencil, Trash2 } from 'lucide-react';
+import vacaImg from '../assets/vaca.png';
+import toroImg from '../assets/toro.png';
 
 export default function AnimalCard({ animal, onEliminar }) {
   const navigate = useNavigate();
   const [confirmando, setConfirmando] = useState(false);
   const [eliminando,  setEliminando]  = useState(false);
+
+  const esMacho = animal.sexo === 'Macho';
 
   const handleEliminar = async (e) => {
     e.stopPropagation();
@@ -34,22 +38,27 @@ export default function AnimalCard({ animal, onEliminar }) {
       className="flex items-center justify-between rounded-2xl bg-white"
       style={{ padding: '1.1rem 1.25rem', border: '1.5px solid #E5E7EB', gap: '1rem' }}
     >
-      {/* Caravana — clickeable para ver detalle */}
+      {/* Info — clickeable para ver detalle */}
       <button
         className="flex items-center gap-3 flex-1 min-w-0 text-left"
         onClick={() => navigate(`/animales/${animal.id}`)}
         disabled={eliminando}
       >
-        <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
-          style={{ backgroundColor: '#EBF7F1' }}>
-          <Tag className="w-4 h-4" style={{ color: 'var(--verde-medio)' }} />
+        <div className="rounded-xl flex items-center justify-center flex-shrink-0"
+          style={{ backgroundColor: '#F9FAFB', width: '4.75rem', height: '4.75rem' }}>
+          <img
+            src={esMacho ? toroImg : vacaImg}
+            alt={esMacho ? 'Toro' : 'Vaca'}
+            style={{ width: '4.5rem', height: '4.5rem' }}
+            className="object-contain"
+          />
         </div>
-        <div className="min-w-0">
-          <p className="font-bold text-base tracking-wide truncate" style={{ color: 'var(--verde-oscuro)', fontFamily: 'monospace' }}>
-            {animal.caravana}
+        <div className="min-w-0 flex items-baseline gap-4 overflow-hidden">
+          <p className="font-bold truncate flex-shrink-0" style={{ color: 'var(--verde-oscuro)', fontSize: '1.75rem' }}>
+            N° {animal.caravana}
           </p>
-          {animal.nombre && (
-            <p className="text-sm truncate" style={{ color: '#9CA3AF' }}>{animal.nombre}</p>
+          {animal.apodo && (
+            <p className="font-semibold truncate" style={{ color: '#9CA3AF', fontSize: '1.75rem' }}>{animal.apodo}</p>
           )}
         </div>
       </button>
