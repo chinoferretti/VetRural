@@ -9,6 +9,10 @@
   --acento:       #95D5B2;
 }
 
+html {
+  font-size: 20px;
+}
+
 * {
   box-sizing: border-box;
   margin: 0;

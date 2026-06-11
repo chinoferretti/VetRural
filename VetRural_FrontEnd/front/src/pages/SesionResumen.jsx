@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { Scale, Hand, Syringe, Smile, Download, Share2, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { Scale, Hand, Syringe, Smile, Download, Share2, CheckCircle2, AlertTriangle, PawPrint } from 'lucide-react';
 import { useEstablecimiento } from '../context/EstablecimientoContext';
 import { useAuth } from '../context/AuthContext';
 import { generarHTMLReporte } from '../utils/reporteUtils';
@@ -22,6 +22,9 @@ const VACUNAS_LABELS = {
 
 const DIST_LABELS = { cabeza: '< 3 meses', cuerpo: '3–6 meses', cola: '> 6 meses' };
 const DENTADURA_LABELS = { 'De_Leche': 'De leche', 'Mixta': 'Mixta', 'Permanente': 'Permanente' };
+const DIENTES_LABELS = { Dos: '2 dientes', Cuatro: '4 dientes', Seis: '6 dientes', Ocho: '8 dientes' };
+const DIENTES_EDAD  = { Dos: '1.5–2 a.', Cuatro: '2.5–3 a.', Seis: '3.5–4 a.', Ocho: '> 4.5 a.' };
+const TIPOS_ORDEN = ['Ternera','Vaquillona','Vaca','Ternero','Novillito','Novillo','Torito','Toro','Sin categoría'];
 
 // ── Helpers de UI ─────────────────────────────────────────────────────────────
 
@@ -293,6 +296,24 @@ export default function SesionResumen() {
                   <Bar dataKey="v" fill="var(--verde-medio)" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
+              {m.boqueo.distribucionDientes && Object.keys(m.boqueo.distribucionDientes).length > 0 && (() => {
+                const totalD = Object.values(m.boqueo.distribucionDientes).reduce((a, b) => a + b, 0);
+                return (
+                  <div className="flex flex-col mt-3" style={{ gap: '0.4rem' }}>
+                    <p className="text-xs font-semibold" style={{ color: '#6B7280' }}>Edad estimada por dientes</p>
+                    {['Dos','Cuatro','Seis','Ocho'].filter(k => m.boqueo.distribucionDientes[k]).map(k => (
+                      <div key={k}>
+                        <RowMetrica
+                          label={`${DIENTES_LABELS[k]} · ${DIENTES_EDAD[k]}`}
+                          value={`${m.boqueo.distribucionDientes[k]} (${Math.round(m.boqueo.distribucionDientes[k] / totalD * 100)}%)`}
+                        />
+                        <BarraProgreso pct={m.boqueo.distribucionDientes[k] / totalD * 100} />
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+
               {Object.values(m.boqueo.deterioro).some(v => v > 0) && (
                 <div className="flex flex-col mt-3" style={{ gap: '0.4rem' }}>
                   <p className="text-xs font-semibold" style={{ color: '#6B7280' }}>Deterioro dental</p>
@@ -334,6 +355,28 @@ export default function SesionResumen() {
           </ResponsiveContainer>
         </SecMetrica>
       )}
+
+      {/* Composición del lote */}
+      {m.distribucionTipo && Object.keys(m.distribucionTipo).length > 0 && (() => {
+        const totalTipo = Object.values(m.distribucionTipo).reduce((a, b) => a + b, 0);
+        const entradas = TIPOS_ORDEN
+          .filter(t => m.distribucionTipo[t])
+          .map(t => [t, m.distribucionTipo[t]])
+          .concat(Object.entries(m.distribucionTipo).filter(([t]) => !TIPOS_ORDEN.includes(t)));
+        return (
+          <SecMetrica titulo="Composición del lote" Icon={PawPrint}>
+            {entradas.map(([tipo, cnt]) => (
+              <div key={tipo}>
+                <RowMetrica
+                  label={tipo}
+                  value={`${cnt} (${Math.round(cnt / totalTipo * 100)}%)`}
+                />
+                <BarraProgreso pct={cnt / totalTipo * 100} />
+              </div>
+            ))}
+          </SecMetrica>
+        );
+      })()}
 
       {/* Outliers */}
       {m.outliers && m.outliers.length > 0 && (

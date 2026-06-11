@@ -329,18 +329,22 @@ export function calcularMetricasDesdeSesion(registros, trabajos) {
   if (trabajos.includes('boqueo')) {
     const conteos = { 'De_Leche': 0, 'Mixta': 0, 'Permanente': 0 };
     const deterioro = { 'Leve': 0, 'Moderado': 0, 'Severo': 0 };
+    const distribucionDientes = {};
 
     registros.forEach(r => {
       if (r.form.boqueo_dentadura && conteos[r.form.boqueo_dentadura] !== undefined)
         conteos[r.form.boqueo_dentadura]++;
       if (r.form.boqueo_deterioro && deterioro[r.form.boqueo_deterioro] !== undefined)
         deterioro[r.form.boqueo_deterioro]++;
+      if (r.form.boqueo_dientes)
+        distribucionDientes[r.form.boqueo_dientes] = (distribucionDientes[r.form.boqueo_dientes] || 0) + 1;
     });
 
     const totalB = Object.values(conteos).reduce((a, b) => a + b, 0);
     boqueo = {
       conteos,
       deterioro,
+      distribucionDientes,
       tasaReposicion: totalB > 0 ? Math.round((conteos['Permanente'] / totalB) * 100) : 0,
     };
   }
@@ -385,5 +389,12 @@ export function calcularMetricasDesdeSesion(registros, trabajos) {
         motivo: 'Boqueo: deterioro dental severo' });
   });
 
-  return { pesaje, tacto, boqueo, vacunacion, outliers };
+  // Distribución por tipo de animal
+  const distribucionTipo = {};
+  registros.forEach(r => {
+    const tipo = r.animal?.tipo || 'Sin categoría';
+    distribucionTipo[tipo] = (distribucionTipo[tipo] || 0) + 1;
+  });
+
+  return { pesaje, tacto, boqueo, vacunacion, outliers, distribucionTipo };
 }

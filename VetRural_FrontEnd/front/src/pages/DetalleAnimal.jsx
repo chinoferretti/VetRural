@@ -60,6 +60,18 @@ function formatEnum(valor) {
   return String(valor).replace(/_/g, ' ');
 }
 
+const DIENTES_EDAD = {
+  Dos:    '1.5–2 años (2 dientes)',
+  Cuatro: '2.5–3 años (4 dientes)',
+  Seis:   '3.5–4 años (6 dientes)',
+  Ocho:   '> 4.5 años (8 dientes)',
+};
+
+function edadDesdeBoqueo(boqueo) {
+  if (!boqueo?.dientes) return null;
+  return DIENTES_EDAD[boqueo.dientes] ?? null;
+}
+
 export default function DetalleAnimal() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -185,7 +197,10 @@ export default function DetalleAnimal() {
           <Campo label="Tipo"       valor={animal.tipo} />
           <Campo label="Pelaje"     valor={animal.observaciones} />
           <Campo label="Lote"       valor={animal.lote} />
-          <Campo label="Nacimiento" valor={formatFechaLocal(animal.nacimiento)} />
+          {animal.nacimiento
+            ? <Campo label="Nacimiento"     valor={formatFechaLocal(animal.nacimiento)} />
+            : edadDesdeBoqueo(boqueo) && <Campo label="Edad calculada" valor={edadDesdeBoqueo(boqueo)} />
+          }
         </Seccion>
 
         {/* Fila clínica: Pesaje + Tacto + Boqueo */}

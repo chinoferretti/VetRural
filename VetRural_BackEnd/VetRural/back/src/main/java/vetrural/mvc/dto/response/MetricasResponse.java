@@ -14,11 +14,16 @@ public class MetricasResponse {
     private int hembras;
     private int machos;
     private Integer edadPromedioMeses;
+    private int bovinosConEdadEstimada;
     private Double pesoPromedio;
     private int conPeso;
     private int prenadas;
     private int totalTactadas;
     private int porcentajePrenez;
-    private Map<String, Integer> vacunados;   // nombre enum → cantidad bovinos vacunados
+    private Map<String, Integer> vacunados;         // nombre enum → cantidad bovinos vacunados
     private List<String> lotes;
+    private Map<String, Integer> distribucionTipo;      // TipoBovinoEnum.name → cantidad
+    private Map<String, Integer> distribucionDientes;   // DientesEnum.name → cantidad
+    private Map<String, Integer> distribucionDeterioro; // DeterioroEnum.name → cantidad
+    private Map<String, Integer> distribucionTacto;     // SituacionEnum.name → cantidad (solo hembras)
 }

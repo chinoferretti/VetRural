@@ -1,13 +1,12 @@
 import { useState, useEffect, useMemo } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  LineChart, Line,
 } from 'recharts';
 import { useEstablecimiento } from '../context/EstablecimientoContext';
 import { useAuth } from '../context/AuthContext';
 import { getMetricasEstablecimiento } from '../api/establecimientosApi';
 import LoadingSpinner from '../components/LoadingSpinner';
-import { PawPrint, Scale, Clock, Heart, CircleSlash, Users, Stethoscope } from 'lucide-react';
+import { PawPrint, Scale, Clock, Heart, CircleSlash, Users, Stethoscope, CalendarDays, Activity } from 'lucide-react';
 
 const SEXOS = ['Todos', 'Hembra', 'Macho'];
 
@@ -20,7 +19,20 @@ const VACUNAS_LABELS = {
   BVD:         'BVD',
 };
 
-const MESES_ES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+const DIENTES_EDAD_LABELS = {
+  Dos:    '2 dientes · 1.5–2 a.',
+  Cuatro: '4 dientes · 2.5–3 a.',
+  Seis:   '6 dientes · 3.5–4 a.',
+  Ocho:   '8 dientes · >4.5 a.',
+};
+const TACTO_LABELS = {
+  Preñada:       'Preñada',
+  Perdonada:     'Perdonada',
+  'Frigorífico': 'Frigorífico',
+  Apta_Servicio: 'Apta servicio',
+  No_Aplica:     'No aplica',
+};
+const TIPOS_ORDEN = ['Ternera','Vaquillona','Vaca','Ternero','Novillito','Novillo','Torito','Toro'];
 
 function formatEdad(meses) {
   if (meses === null || meses === undefined) return '—';
@@ -28,11 +40,6 @@ function formatEdad(meses) {
   if (anios === 0) return `${m} mes${m !== 1 ? 'es' : ''}`;
   if (m === 0)     return `${anios} año${anios !== 1 ? 's' : ''}`;
   return `${anios} a. ${m} m.`;
-}
-
-function formatFecha(iso) {
-  const d = new Date(iso);
-  return `${MESES_ES[d.getMonth()]} ${d.getFullYear()}`;
 }
 
 // ── Componentes UI ─────────────────────────────────────────────────────────────
@@ -77,20 +84,15 @@ function useSesionStats() {
         ? +(conPesaje.reduce((s, v) => s + v.metricas.pesaje.adpvPromedio, 0) / conPesaje.length).toFixed(2)
         : null;
 
-      const evolucionPeso = sesiones
-        .filter(v => v.metricas?.pesaje?.promedio)
-        .sort((a, b) => new Date(a.fecha) - new Date(b.fecha))
-        .map(v => ({ fecha: formatFecha(v.fecha), promedio: v.metricas.pesaje.promedio, adpv: v.metricas.pesaje.adpvPromedio }));
-
       const trabajosCount = {};
       sesiones.forEach(v => (v.trabajos ?? []).forEach(t => { trabajosCount[t] = (trabajosCount[t] || 0) + 1; }));
       const trabajosChart = Object.entries(trabajosCount)
         .map(([trabajo, cantidad]) => ({ trabajo, cantidad }))
         .sort((a, b) => b.cantidad - a.cantidad);
 
-      return { totalSesiones, totalAtendidos, totalTratamientos, totalOutliers, adpvPromedio, evolucionPeso, trabajosChart };
+      return { totalSesiones, totalAtendidos, totalTratamientos, totalOutliers, adpvPromedio, trabajosChart };
     } catch {
-      return { totalSesiones: 0, totalAtendidos: 0, totalTratamientos: 0, totalOutliers: 0, adpvPromedio: null, evolucionPeso: [], trabajosChart: [] };
+      return { totalSesiones: 0, totalAtendidos: 0, totalTratamientos: 0, totalOutliers: 0, adpvPromedio: null, trabajosChart: [] };
     }
   }, [historialKey]);
 }
@@ -143,58 +145,63 @@ export default function Metricas() {
       <section className="flex flex-col" style={{ gap: '1rem' }}>
         <SectionTitle>Actividad de sesiones</SectionTitle>
 
-        {sesion.evolucionPeso.length > 0 && (
-          <div className="card" style={{ padding: '1.75rem' }}>
-            <div className="flex items-start justify-between mb-5 flex-wrap gap-3">
-              <div>
-                <h3 className="font-bold" style={{ color: 'var(--verde-oscuro)' }}>Evolución del peso promedio por sesión</h3>
-                <p className="text-sm mt-0.5" style={{ color: '#6B7280' }}>Sesiones con pesaje registrado</p>
-              </div>
-              {sesion.adpvPromedio !== null && (
-                <div className="rounded-xl px-4 py-2 text-center"
-                  style={{ backgroundColor: '#EBF7F1', border: '1.5px solid #C8E6D8' }}>
-                  <p className="text-xs font-medium" style={{ color: '#6B7280' }}>ADPV promedio</p>
-                  <p className="text-2xl font-bold" style={{ color: 'var(--verde-oscuro)' }}>{sesion.adpvPromedio}</p>
-                  <p className="text-xs" style={{ color: 'var(--verde-medio)' }}>kg / día</p>
-                </div>
-              )}
-            </div>
-            <ResponsiveContainer width="100%" height={220}>
-              <LineChart data={sesion.evolucionPeso} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" />
-                <XAxis dataKey="fecha" tick={{ fontSize: 12 }} />
-                <YAxis tick={{ fontSize: 12 }} unit=" kg" width={60} />
-                <Tooltip formatter={(v) => [`${v} kg`, 'Peso promedio']}
-                  contentStyle={{ borderRadius: '0.75rem', border: '1px solid #E5E7EB' }} />
-                <Line type="monotone" dataKey="promedio" stroke="var(--verde-medio)" strokeWidth={2.5}
-                  dot={{ fill: 'var(--verde-medio)', r: 5 }} activeDot={{ r: 7 }} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        )}
-
-        {sesion.trabajosChart.length > 0 && (
-          <div className="card" style={{ padding: '1.75rem' }}>
-            <h3 className="font-bold mb-5" style={{ color: 'var(--verde-oscuro)' }}>Trabajos más realizados</h3>
-            <ResponsiveContainer width="100%" height={180}>
-              <BarChart data={sesion.trabajosChart} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" />
-                <XAxis dataKey="trabajo" tick={{ fontSize: 13 }} />
-                <YAxis allowDecimals={false} tick={{ fontSize: 13 }} />
-                <Tooltip formatter={(v) => [`${v}`, 'Sesiones']}
-                  contentStyle={{ borderRadius: '0.75rem', border: '1px solid #E5E7EB' }} />
-                <Bar dataKey="cantidad" fill="var(--verde-oscuro)" radius={[8, 8, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        )}
-
-        {sesion.totalSesiones === 0 && (
+        {sesion.totalSesiones === 0 ? (
           <div className="card text-center" style={{ padding: '2rem' }}>
             <p className="text-4xl mb-2">📋</p>
             <p className="font-semibold" style={{ color: '#374151' }}>Sin sesiones registradas aún</p>
             <p className="text-sm mt-1" style={{ color: '#9CA3AF' }}>Completá una sesión de manga para ver estadísticas</p>
           </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+              <StatCard
+                titulo="Sesiones realizadas"
+                valor={sesion.totalSesiones}
+                Icon={CalendarDays}
+                colorIcon={{ bg: '#EBF7F1', border: '#C8E6D8', icon: 'var(--verde-medio)' }}
+              />
+              <StatCard
+                titulo="Animales atendidos"
+                valor={sesion.totalAtendidos}
+                subtexto="total acumulado"
+                Icon={PawPrint}
+                colorIcon={{ bg: '#EBF7F1', border: '#C8E6D8', icon: 'var(--verde-medio)' }}
+              />
+              {sesion.adpvPromedio !== null ? (
+                <StatCard
+                  titulo="ADPV promedio"
+                  valor={`${sesion.adpvPromedio} kg/d`}
+                  subtexto="entre sesiones con pesaje"
+                  Icon={Activity}
+                  colorIcon={{ bg: '#EBF7F1', border: '#C8E6D8', icon: 'var(--verde-medio)' }}
+                />
+              ) : (
+                <StatCard
+                  titulo="Outliers detectados"
+                  valor={sesion.totalOutliers}
+                  subtexto="animales fuera de rango"
+                  Icon={Scale}
+                  colorIcon={{ bg: '#FEF3C7', border: '#FDE68A', icon: '#D97706' }}
+                />
+              )}
+            </div>
+
+            {sesion.trabajosChart.length > 0 && (
+              <div className="card" style={{ padding: '1.75rem' }}>
+                <h3 className="font-bold mb-5" style={{ color: 'var(--verde-oscuro)' }}>Trabajos más realizados</h3>
+                <ResponsiveContainer width="100%" height={180}>
+                  <BarChart data={sesion.trabajosChart} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" />
+                    <XAxis dataKey="trabajo" tick={{ fontSize: 13 }} />
+                    <YAxis allowDecimals={false} tick={{ fontSize: 13 }} />
+                    <Tooltip formatter={(v) => [`${v}`, 'Sesiones']}
+                      contentStyle={{ borderRadius: '0.75rem', border: '1px solid #E5E7EB' }} />
+                    <Bar dataKey="cantidad" fill="var(--verde-oscuro)" radius={[8, 8, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </>
         )}
       </section>
 
@@ -264,6 +271,11 @@ export default function Metricas() {
                     Icon={Scale} />
                   <StatCard titulo="Edad promedio"
                     valor={formatEdad(metricas.edadPromedioMeses)}
+                    subtexto={
+                      metricas.bovinosConEdadEstimada > 0
+                        ? `${metricas.bovinosConEdadEstimada} estimados por boqueo`
+                        : undefined
+                    }
                     Icon={Clock} />
                   <StatCard titulo="Hembras tactadas"
                     valor={metricas.totalTactadas > 0 ? `${metricas.totalTactadas}` : '—'}
@@ -309,6 +321,85 @@ export default function Metricas() {
                   </div>
                 )}
 
+                {/* Distribución por categoría */}
+                {metricas.distribucionTipo && Object.keys(metricas.distribucionTipo).length > 0 && (() => {
+                  const total = Object.values(metricas.distribucionTipo).reduce((a, b) => a + b, 0);
+                  const entradas = TIPOS_ORDEN
+                    .filter(t => metricas.distribucionTipo[t])
+                    .map(t => ({ tipo: t, cantidad: metricas.distribucionTipo[t] }))
+                    .concat(Object.entries(metricas.distribucionTipo)
+                      .filter(([t]) => !TIPOS_ORDEN.includes(t))
+                      .map(([t, c]) => ({ tipo: t, cantidad: c })));
+                  return (
+                    <div className="card" style={{ padding: '1.75rem' }}>
+                      <h3 className="font-bold text-lg mb-5" style={{ color: 'var(--verde-oscuro)' }}>Composición del rodeo</h3>
+                      <ResponsiveContainer width="100%" height={Math.max(160, entradas.length * 44)}>
+                        <BarChart data={entradas} layout="vertical" margin={{ left: 8, right: 48, top: 0, bottom: 0 }}>
+                          <XAxis type="number" allowDecimals={false} tick={{ fontSize: 12 }} />
+                          <YAxis type="category" dataKey="tipo" tick={{ fontSize: 12 }} width={90} />
+                          <Tooltip
+                            formatter={(v) => [`${v} (${total > 0 ? Math.round(v / total * 100) : 0}%)`, 'Animales']}
+                            contentStyle={{ borderRadius: '0.75rem', border: '1px solid #E5E7EB' }} />
+                          <Bar dataKey="cantidad" fill="var(--verde-medio)" radius={[0, 6, 6, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  );
+                })()}
+
+                {/* Distribución etaria por boqueo */}
+                {metricas.distribucionDientes && Object.keys(metricas.distribucionDientes).length > 0 && (() => {
+                  const total = Object.values(metricas.distribucionDientes).reduce((a, b) => a + b, 0);
+                  const data = ['Dos','Cuatro','Seis','Ocho']
+                    .filter(k => metricas.distribucionDientes[k])
+                    .map(k => ({ nombre: DIENTES_EDAD_LABELS[k] || k, cantidad: metricas.distribucionDientes[k] }));
+                  return (
+                    <div className="card" style={{ padding: '1.75rem' }}>
+                      <h3 className="font-bold text-lg mb-1" style={{ color: 'var(--verde-oscuro)' }}>Distribución etaria por boqueo</h3>
+                      <p className="text-sm mb-5" style={{ color: '#9CA3AF' }}>
+                        Animales con boqueo registrado · total: {total}
+                      </p>
+                      <ResponsiveContainer width="100%" height={Math.max(160, data.length * 48)}>
+                        <BarChart data={data} layout="vertical" margin={{ left: 8, right: 48, top: 0, bottom: 0 }}>
+                          <XAxis type="number" allowDecimals={false} tick={{ fontSize: 12 }} />
+                          <YAxis type="category" dataKey="nombre" tick={{ fontSize: 11 }} width={140} />
+                          <Tooltip
+                            formatter={(v) => [`${v} (${total > 0 ? Math.round(v / total * 100) : 0}%)`, 'Animales']}
+                            contentStyle={{ borderRadius: '0.75rem', border: '1px solid #E5E7EB' }} />
+                          <Bar dataKey="cantidad" fill="#7C3AED" radius={[0, 6, 6, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  );
+                })()}
+
+                {/* Situación reproductiva (distribución completa de tacto) */}
+                {metricas.distribucionTacto && Object.keys(metricas.distribucionTacto).length > 0 && (() => {
+                  const total = Object.values(metricas.distribucionTacto).reduce((a, b) => a + b, 0);
+                  const data = Object.entries(metricas.distribucionTacto).map(([k, v]) => ({
+                    nombre: TACTO_LABELS[k] || k.replace(/_/g, ' '),
+                    cantidad: v,
+                  }));
+                  return (
+                    <div className="card" style={{ padding: '1.75rem' }}>
+                      <h3 className="font-bold text-lg mb-1" style={{ color: 'var(--verde-oscuro)' }}>Situación reproductiva</h3>
+                      <p className="text-sm mb-5" style={{ color: '#9CA3AF' }}>
+                        Hembras con tacto registrado · total: {total}
+                      </p>
+                      <ResponsiveContainer width="100%" height={Math.max(160, data.length * 44)}>
+                        <BarChart data={data} layout="vertical" margin={{ left: 8, right: 48, top: 0, bottom: 0 }}>
+                          <XAxis type="number" allowDecimals={false} tick={{ fontSize: 12 }} />
+                          <YAxis type="category" dataKey="nombre" tick={{ fontSize: 12 }} width={100} />
+                          <Tooltip
+                            formatter={(v) => [`${v} (${total > 0 ? Math.round(v / total * 100) : 0}%)`, 'Hembras']}
+                            contentStyle={{ borderRadius: '0.75rem', border: '1px solid #E5E7EB' }} />
+                          <Bar dataKey="cantidad" fill="#0EA5E9" radius={[0, 6, 6, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  );
+                })()}
+
                 {/* Vacunación */}
                 {vacunacionChart.length > 0 && (
                   <div className="card" style={{ padding: '1.75rem' }}>
@@ -322,7 +413,7 @@ export default function Metricas() {
                         <XAxis dataKey="vacuna" tick={{ fontSize: 12 }} />
                         <YAxis allowDecimals={false} tick={{ fontSize: 12 }} domain={[0, metricas.totalBovinos]} />
                         <Tooltip
-                          formatter={(v, _, { payload }) => [
+                          formatter={(v) => [
                             `${v} (${metricas.totalBovinos > 0 ? Math.round(v / metricas.totalBovinos * 100) : 0}%)`,
                             'Vacunados'
                           ]}
