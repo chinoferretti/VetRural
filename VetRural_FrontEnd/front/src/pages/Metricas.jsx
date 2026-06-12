@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts';
@@ -6,7 +6,7 @@ import { useEstablecimiento } from '../context/EstablecimientoContext';
 import { useAuth } from '../context/AuthContext';
 import { getMetricasEstablecimiento } from '../api/establecimientosApi';
 import LoadingSpinner from '../components/LoadingSpinner';
-import { PawPrint, Scale, Clock, Heart, CircleSlash, Users, Stethoscope, CalendarDays, Activity, AlertTriangle } from 'lucide-react';
+import { PawPrint, Scale, Clock, Heart, CircleSlash, Users, Stethoscope, CalendarDays, Activity, AlertTriangle, Download, Share2, CheckCircle2 } from 'lucide-react';
 
 const SEXOS = ['Todos', 'Hembra', 'Macho'];
 
@@ -76,7 +76,6 @@ function useSesionStats() {
       const sesiones = JSON.parse(localStorage.getItem(historialKey) || '[]');
       const totalSesiones     = sesiones.length;
       const totalAtendidos    = sesiones.reduce((s, v) => s + (v.animalesAtendidos?.length ?? 0), 0);
-      const totalTratamientos = sesiones.reduce((s, v) => s + (v.tratamientos?.length ?? 0), 0);
       const totalOutliers     = sesiones.reduce((s, v) => s + (v.metricas?.outliers?.length ?? 0), 0);
 
       const conPesaje = sesiones.filter(v => v.metricas?.pesaje?.adpvPromedio != null);
@@ -90,14 +89,110 @@ function useSesionStats() {
         .map(([trabajo, cantidad]) => ({ trabajo, cantidad }))
         .sort((a, b) => b.cantidad - a.cantidad);
 
-      return { totalSesiones, totalAtendidos, totalTratamientos, totalOutliers, adpvPromedio, trabajosChart };
+      return { totalSesiones, totalAtendidos, totalOutliers, adpvPromedio, trabajosChart };
     } catch {
-      return { totalSesiones: 0, totalAtendidos: 0, totalTratamientos: 0, totalOutliers: 0, adpvPromedio: null, trabajosChart: [] };
+      return { totalSesiones: 0, totalAtendidos: 0, totalOutliers: 0, adpvPromedio: null, trabajosChart: [] };
     }
   }, [historialKey]);
 }
 
+// ── Alertas agrupadas por tipo ─────────────────────────────────────────────────
+
+function AlertasAgrupadas({ alertas }) {
+  const [expandido, setExpandido] = useState(null);
+
+  const grupos = useMemo(() => {
+    const map = {};
+    alertas.forEach(a => {
+      if (!map[a.motivo]) map[a.motivo] = [];
+      map[a.motivo].push(a.caravana);
+    });
+    return Object.entries(map).sort((a, b) => b[1].length - a[1].length);
+  }, [alertas]);
+
+  return (
+    <div className="card" style={{ padding: '1.75rem' }}>
+      <div className="flex items-center gap-2 mb-4">
+        <AlertTriangle className="w-5 h-5" style={{ color: '#D97706' }} />
+        <h3 className="font-bold text-lg" style={{ color: 'var(--verde-oscuro)' }}>Alertas del rodeo</h3>
+      </div>
+      {alertas.length === 0 ? (
+        <div className="flex items-center gap-2 py-3 px-4 rounded-xl" style={{ backgroundColor: '#F0FDF4', border: '1px solid #86EFAC' }}>
+          <CheckCircle2 className="w-4 h-4 flex-shrink-0" style={{ color: 'var(--verde-medio)' }} />
+          <p className="text-sm font-semibold" style={{ color: 'var(--verde-oscuro)' }}>Sin alertas activas para este filtro</p>
+        </div>
+      ) : (
+        <div className="flex flex-col" style={{ gap: '0.5rem' }}>
+          {grupos.map(([motivo, caravanas]) => {
+            const abierto = expandido === motivo;
+            const esSolo = caravanas.length === 1;
+            return (
+              <div key={motivo}>
+                <button
+                  onClick={() => !esSolo && setExpandido(abierto ? null : motivo)}
+                  className="w-full flex items-center justify-between px-4 py-2.5 rounded-xl"
+                  style={{
+                    backgroundColor: '#FFFBEB',
+                    border: '1px solid #FDE68A',
+                    cursor: esSolo ? 'default' : 'pointer',
+                  }}
+                >
+                  <div className="flex items-center gap-2 min-w-0 text-left">
+                    <AlertTriangle className="w-4 h-4 flex-shrink-0" style={{ color: '#D97706' }} />
+                    <span className="text-sm font-semibold" style={{ color: '#92400E' }}>
+                      {esSolo
+                        ? `N° ${caravanas[0]}: ${motivo}`
+                        : `${caravanas.length} animales: ${motivo}`}
+                    </span>
+                  </div>
+                  {!esSolo && (
+                    <span className="text-xs font-bold flex-shrink-0 ml-2" style={{ color: '#D97706' }}>
+                      {abierto ? '▲' : '▼'}
+                    </span>
+                  )}
+                </button>
+                {abierto && !esSolo && (
+                  <div className="mt-1 flex flex-col gap-1 pl-4">
+                    {caravanas.map(car => (
+                      <div key={car} className="px-3 py-1.5 rounded-lg"
+                        style={{ backgroundColor: '#FFFBEB', border: '1px solid #FEF3C7' }}>
+                        <span className="text-xs font-semibold" style={{ color: '#92400E' }}>N° {car}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Componente principal ───────────────────────────────────────────────────────
+
+function descargarPDF(nombreEstablecimiento) {
+  const titulo = document.title;
+  document.title = `metricas_${(nombreEstablecimiento || 'rodeo').replace(/\s+/g, '_').toLowerCase()}`;
+  window.print();
+  setTimeout(() => { document.title = titulo; }, 500);
+}
+
+async function compartirMetricas(seleccionado, metricas) {
+  const nombre = seleccionado?.nombre ?? 'Establecimiento';
+  const texto = metricas
+    ? `Métricas de ${nombre}\nTotal: ${metricas.totalBovinos} animales\nPeso promedio: ${metricas.pesoPromedio ? metricas.pesoPromedio + ' kg' : '—'}\nPreñez: ${metricas.porcentajePrenez ?? '—'}%`
+    : `Métricas de ${nombre}`;
+  if (navigator.share) {
+    try {
+      await navigator.share({ title: `Métricas · ${nombre}`, text: texto });
+    } catch { /* usuario canceló */ }
+  } else {
+    await navigator.clipboard.writeText(texto);
+    alert('Resumen copiado al portapapeles');
+  }
+}
 
 export default function Metricas() {
   const { seleccionado } = useEstablecimiento();
@@ -134,11 +229,33 @@ export default function Metricas() {
     <div className="flex flex-col w-full" style={{ gap: '2.5rem' }}>
 
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold" style={{ color: 'var(--verde-oscuro)' }}>Métricas</h1>
-        <p className="mt-1 text-sm" style={{ color: '#6B7280' }}>
-          {seleccionado ? seleccionado.nombre : 'Seleccioná un establecimiento'}
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold" style={{ color: 'var(--verde-oscuro)' }}>Métricas</h1>
+          <p className="mt-1 text-sm" style={{ color: '#6B7280' }}>
+            {seleccionado ? seleccionado.nombre : 'Seleccioná un establecimiento'}
+          </p>
+        </div>
+        <div className="flex gap-2 flex-shrink-0 mt-1">
+          <button
+            onClick={() => descargarPDF(seleccionado?.nombre)}
+            className="flex items-center gap-1.5 rounded-xl font-semibold text-sm transition-colors hover:bg-gray-100"
+            style={{ border: '1.5px solid #E5E7EB', padding: '0.5rem 0.875rem', color: '#374151', backgroundColor: 'white' }}
+            title="Descargar como PDF"
+          >
+            <Download className="w-4 h-4" />
+            PDF
+          </button>
+          <button
+            onClick={() => compartirMetricas(seleccionado, metricas)}
+            className="flex items-center gap-1.5 rounded-xl font-semibold text-sm transition-colors hover:bg-green-50"
+            style={{ border: '1.5px solid #86EFAC', padding: '0.5rem 0.875rem', color: 'var(--verde-oscuro)', backgroundColor: 'white' }}
+            title="Compartir métricas"
+          >
+            <Share2 className="w-4 h-4" />
+            Compartir
+          </button>
+        </div>
       </div>
 
       {/* ── Sección 1: Actividad de sesiones (desde localStorage) ── */}
@@ -147,7 +264,6 @@ export default function Metricas() {
 
         {sesion.totalSesiones === 0 ? (
           <div className="card text-center" style={{ padding: '2rem' }}>
-            <p className="text-4xl mb-2">📋</p>
             <p className="font-semibold" style={{ color: '#374151' }}>Sin sesiones registradas aún</p>
             <p className="text-sm mt-1" style={{ color: '#9CA3AF' }}>Completá una sesión de manga para ver estadísticas</p>
           </div>
@@ -167,7 +283,7 @@ export default function Metricas() {
                 Icon={PawPrint}
                 colorIcon={{ bg: '#EBF7F1', border: '#C8E6D8', icon: 'var(--verde-medio)' }}
               />
-              {sesion.adpvPromedio !== null ? (
+              {sesion.adpvPromedio !== null && (
                 <StatCard
                   titulo="ADPV promedio"
                   valor={`${sesion.adpvPromedio} kg/d`}
@@ -175,15 +291,14 @@ export default function Metricas() {
                   Icon={Activity}
                   colorIcon={{ bg: '#EBF7F1', border: '#C8E6D8', icon: 'var(--verde-medio)' }}
                 />
-              ) : (
-                <StatCard
-                  titulo="Alertas"
-                  valor={metricas?.alertas?.length ?? sesion.totalOutliers}
-                  subtexto={metricas?.alertas ? `${metricas.alertas.length} problema${metricas.alertas.length !== 1 ? 's' : ''} en el rodeo` : "en sesiones registradas"}
-                  Icon={AlertTriangle}
-                  colorIcon={{ bg: '#FEF3C7', border: '#FDE68A', icon: '#D97706' }}
-                />
               )}
+              <StatCard
+                titulo="Alertas del rodeo"
+                valor={metricas?.alertas?.length ?? sesion.totalOutliers}
+                subtexto={metricas?.alertas ? `${metricas.alertas.length} problema${metricas.alertas.length !== 1 ? 's' : ''} detectado${metricas.alertas.length !== 1 ? 's' : ''}` : 'en sesiones registradas'}
+                Icon={AlertTriangle}
+                colorIcon={{ bg: '#FEF3C7', border: '#FDE68A', icon: '#D97706' }}
+              />
             </div>
 
             {sesion.trabajosChart.length > 0 && (
@@ -211,7 +326,6 @@ export default function Metricas() {
 
         {!seleccionado ? (
           <div className="card text-center" style={{ padding: '2rem' }}>
-            <p className="text-4xl mb-2">🏡</p>
             <p className="font-semibold" style={{ color: '#374151' }}>Seleccioná un establecimiento</p>
           </div>
         ) : (
@@ -254,7 +368,6 @@ export default function Metricas() {
               </div>
             ) : metricas && metricas.totalBovinos === 0 ? (
               <div className="card text-center" style={{ padding: '2rem' }}>
-                <p className="text-4xl mb-2">🐄</p>
                 <p className="font-semibold" style={{ color: '#374151' }}>Sin animales para este filtro</p>
               </div>
             ) : metricas && (
@@ -366,7 +479,7 @@ export default function Metricas() {
                           <Tooltip
                             formatter={(v) => [`${v} (${total > 0 ? Math.round(v / total * 100) : 0}%)`, 'Animales']}
                             contentStyle={{ borderRadius: '0.75rem', border: '1px solid #E5E7EB' }} />
-                          <Bar dataKey="cantidad" fill="#7C3AED" radius={[0, 6, 6, 0]} />
+                          <Bar dataKey="cantidad" fill="var(--verde-claro)" radius={[0, 6, 6, 0]} />
                         </BarChart>
                       </ResponsiveContainer>
                     </div>
@@ -393,7 +506,7 @@ export default function Metricas() {
                           <Tooltip
                             formatter={(v) => [`${v} (${total > 0 ? Math.round(v / total * 100) : 0}%)`, 'Hembras']}
                             contentStyle={{ borderRadius: '0.75rem', border: '1px solid #E5E7EB' }} />
-                          <Bar dataKey="cantidad" fill="#0EA5E9" radius={[0, 6, 6, 0]} />
+                          <Bar dataKey="cantidad" fill="var(--verde-medio)" radius={[0, 6, 6, 0]} />
                         </BarChart>
                       </ResponsiveContainer>
                     </div>
@@ -429,34 +542,8 @@ export default function Metricas() {
                   </div>
                 )}
 
-                {/* Alertas */}
-                {metricas.alertas && (
-                  <div className="card" style={{ padding: '1.75rem' }}>
-                    <div className="flex items-center gap-2 mb-4">
-                      <AlertTriangle className="w-5 h-5" style={{ color: '#D97706' }} />
-                      <h3 className="font-bold text-lg" style={{ color: 'var(--verde-oscuro)' }}>Alertas del rodeo</h3>
-                    </div>
-                    {metricas.alertas.length === 0 ? (
-                      <div className="flex items-center gap-2 py-3 px-4 rounded-xl" style={{ backgroundColor: '#F0FDF4', border: '1px solid #86EFAC' }}>
-                        <span style={{ fontSize: '1.1rem' }}>✅</span>
-                        <p className="text-sm font-semibold" style={{ color: 'var(--verde-oscuro)' }}>Sin alertas activas para este filtro</p>
-                      </div>
-                    ) : (
-                      <div className="flex flex-col" style={{ gap: '0.5rem' }}>
-                        {metricas.alertas.map((alerta, i) => (
-                          <div key={i} className="flex items-center gap-3 px-4 py-2.5 rounded-xl"
-                            style={{ backgroundColor: '#FFFBEB', border: '1px solid #FDE68A' }}>
-                            <span className="text-sm flex-shrink-0">⚠️</span>
-                            <p className="text-sm" style={{ color: '#92400E' }}>
-                              <span className="font-bold">N° {alerta.caravana}:</span>{' '}
-                              <span>{alerta.motivo}</span>
-                            </p>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
+                {/* Alertas agrupadas */}
+                {metricas.alertas && <AlertasAgrupadas alertas={metricas.alertas} />}
               </>
             )}
           </>

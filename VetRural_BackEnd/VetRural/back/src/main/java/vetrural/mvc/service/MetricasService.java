@@ -7,6 +7,8 @@ import vetrural.mvc.dto.response.AlertaBovino;
 import vetrural.mvc.dto.response.MetricasResponse;
 import vetrural.mvc.entity.Bovino;
 import vetrural.mvc.entity.Boqueo;
+import vetrural.mvc.entity.Pesaje;
+import vetrural.mvc.entity.Tacto;
 import vetrural.mvc.entity.Vacunacion;
 import vetrural.mvc.enumerations.DentaduraEnum;
 import vetrural.mvc.enumerations.DeterioroEnum;
@@ -15,6 +17,10 @@ import vetrural.mvc.enumerations.SexoEnum;
 import vetrural.mvc.enumerations.SituacionEnum;
 import vetrural.mvc.enumerations.TipoBovinoEnum;
 import vetrural.mvc.enumerations.VacunaTipoEnum;
+import vetrural.mvc.repository.BoqueoRepository;
+import vetrural.mvc.repository.PesajeRepository;
+import vetrural.mvc.repository.TactoRepository;
+import vetrural.mvc.repository.VacunacionRepository;
 
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
@@ -24,18 +30,17 @@ import java.util.stream.Collectors;
 @Service
 public class MetricasService {
 
-    @Autowired private BovinoService     bovinoService;
-    @Autowired private PesajeService     pesajeService;
-    @Autowired private TactoService      tactoService;
-    @Autowired private BoqueoService     boqueoService;
-    @Autowired private VacunacionService vacunacionService;
+    @Autowired private BovinoService      bovinoService;
+    @Autowired private BoqueoRepository   boqueoRepository;
+    @Autowired private PesajeRepository   pesajeRepository;
+    @Autowired private TactoRepository    tactoRepository;
+    @Autowired private VacunacionRepository vacunacionRepository;
 
-    // Días de vigencia por vacuna (SENASA / recomendaciones estándar)
     private static final Map<VacunaTipoEnum, Long> INTERVALO_DIAS;
     static {
         INTERVALO_DIAS = new EnumMap<>(VacunaTipoEnum.class);
-        INTERVALO_DIAS.put(VacunaTipoEnum.Aftosa,      180L);  // 2 campañas/año
-        INTERVALO_DIAS.put(VacunaTipoEnum.Brucelosis,  36500L);// única en la vida
+        INTERVALO_DIAS.put(VacunaTipoEnum.Aftosa,      180L);
+        INTERVALO_DIAS.put(VacunaTipoEnum.Brucelosis,  36500L);
         INTERVALO_DIAS.put(VacunaTipoEnum.Carbunco,    365L);
         INTERVALO_DIAS.put(VacunaTipoEnum.Clostridial, 365L);
         INTERVALO_DIAS.put(VacunaTipoEnum.IBR,         365L);
@@ -43,7 +48,6 @@ public class MetricasService {
         INTERVALO_DIAS.put(VacunaTipoEnum.IBR_BVD,     365L);
     }
 
-    // Rangos de peso normal por categoría (kg) [mín, máx]
     private static final Map<TipoBovinoEnum, int[]> RANGOS_PESO;
     static {
         RANGOS_PESO = new EnumMap<>(TipoBovinoEnum.class);
@@ -67,11 +71,19 @@ public class MetricasService {
         if (lote != null && !lote.isBlank())
             bovinos = bovinos.stream().filter(b -> lote.equals(b.getLote())).collect(Collectors.toList());
 
+        Set<Long> bovinoIds = bovinos.stream().map(Bovino::getId).collect(Collectors.toSet());
+
+        // ── Batch load last-event-per-bovino ────────────────────────────────
+        Map<Long, Pesaje>  ultimoPesaje  = batchUltimoPesaje(establecimientoId, bovinoIds);
+        Map<Long, Tacto>   ultimoTacto   = batchUltimoTacto(establecimientoId, bovinoIds);
+        Map<Long, Boqueo>  ultimoBoqueo  = batchUltimoBoqueo(establecimientoId, bovinoIds);
+        Map<Long, List<Vacunacion>> vacsByBovino = batchVacunaciones(establecimientoId, bovinoIds);
+
         int total   = bovinos.size();
         int hembras = (int) bovinos.stream().filter(b -> SexoEnum.Hembra.equals(b.getSexo())).count();
         int machos  = total - hembras;
 
-        // ── Edad promedio (nacimiento → fallback boqueo) ─────────────────────
+        // ── Edad promedio ────────────────────────────────────────────────────
         LocalDate hoy = LocalDate.now();
         List<Long> mesesEdad = new ArrayList<>();
         int bovinosConEdadEstimada = 0;
@@ -79,9 +91,9 @@ public class MetricasService {
             if (b.getNacimiento() != null) {
                 mesesEdad.add(ChronoUnit.MONTHS.between(b.getNacimiento(), hoy));
             } else {
-                var boqueoOpt = boqueoService.getUltimoBoqueo(b);
-                if (boqueoOpt.isPresent()) {
-                    Long meses = estimarMesesPorBoqueo(boqueoOpt.get());
+                Boqueo bq = ultimoBoqueo.get(b.getId());
+                if (bq != null) {
+                    Long meses = estimarMesesPorBoqueo(bq);
                     if (meses != null) { mesesEdad.add(meses); bovinosConEdadEstimada++; }
                 }
             }
@@ -91,9 +103,9 @@ public class MetricasService {
 
         // ── Peso promedio ────────────────────────────────────────────────────
         List<Double> pesos = bovinos.stream()
-                .map(b -> pesajeService.getUltimoPesaje(b))
-                .filter(Optional::isPresent)
-                .map(opt -> opt.get().getPeso())
+                .map(b -> ultimoPesaje.get(b.getId()))
+                .filter(Objects::nonNull)
+                .map(Pesaje::getPeso)
                 .collect(Collectors.toList());
         int conPeso = pesos.size();
         Double pesoPromedio = pesos.isEmpty() ? null
@@ -105,25 +117,25 @@ public class MetricasService {
         int prenadas = 0, totalTactadas = 0;
         Map<String, Integer> distribucionTacto = new LinkedHashMap<>();
         for (Bovino h : hembrasList) {
-            var t = tactoService.getUltimoTacto(h);
-            if (t.isPresent()) {
+            Tacto t = ultimoTacto.get(h.getId());
+            if (t != null) {
                 totalTactadas++;
-                if (SituacionEnum.Preñada.equals(t.get().getSituacion())) prenadas++;
-                if (t.get().getSituacion() != null)
-                    distribucionTacto.merge(t.get().getSituacion().name(), 1, Integer::sum);
+                if (SituacionEnum.Preñada.equals(t.getSituacion())) prenadas++;
+                if (t.getSituacion() != null)
+                    distribucionTacto.merge(t.getSituacion().name(), 1, Integer::sum);
             }
         }
         int pctPrenez = totalTactadas > 0 ? Math.round((float) prenadas / totalTactadas * 100) : 0;
 
         // ── Vacunación: alguna vez + vigente ─────────────────────────────────
-        Map<String, Integer> vacunados        = new LinkedHashMap<>();
+        Map<String, Integer> vacunados         = new LinkedHashMap<>();
         Map<String, Integer> vacunadosVigentes = new LinkedHashMap<>();
         for (VacunaTipoEnum v : VacunaTipoEnum.values()) {
             vacunados.put(v.name(), 0);
             vacunadosVigentes.put(v.name(), 0);
         }
         for (Bovino b : bovinos) {
-            List<Vacunacion> vacs = vacunacionService.getVacunacionesPorBovino(b);
+            List<Vacunacion> vacs = vacsByBovino.getOrDefault(b.getId(), Collections.emptyList());
             for (VacunaTipoEnum tipo : VacunaTipoEnum.values()) {
                 Optional<Vacunacion> ultima = vacs.stream()
                         .filter(v -> tipo.equals(v.getVacuna()))
@@ -150,18 +162,22 @@ public class MetricasService {
 
         // ── Distribución por dientes ──────────────────────────────────────────
         Map<String, Integer> distribucionDientes = new LinkedHashMap<>();
-        bovinos.forEach(b -> boqueoService.getUltimoBoqueo(b).ifPresent(bq -> {
-            if (bq.getDientes() != null) distribucionDientes.merge(bq.getDientes().name(), 1, Integer::sum);
-        }));
+        bovinos.forEach(b -> {
+            Boqueo bq = ultimoBoqueo.get(b.getId());
+            if (bq != null && bq.getDientes() != null)
+                distribucionDientes.merge(bq.getDientes().name(), 1, Integer::sum);
+        });
 
         // ── Distribución por deterioro ────────────────────────────────────────
         Map<String, Integer> distribucionDeterioro = new LinkedHashMap<>();
-        bovinos.forEach(b -> boqueoService.getUltimoBoqueo(b).ifPresent(bq -> {
-            if (bq.getDeterioro() != null) distribucionDeterioro.merge(bq.getDeterioro().name(), 1, Integer::sum);
-        }));
+        bovinos.forEach(b -> {
+            Boqueo bq = ultimoBoqueo.get(b.getId());
+            if (bq != null && bq.getDeterioro() != null)
+                distribucionDeterioro.merge(bq.getDeterioro().name(), 1, Integer::sum);
+        });
 
         // ── Alertas ───────────────────────────────────────────────────────────
-        List<AlertaBovino> alertas = calcularAlertas(bovinos, hoy, vacunados, vacunadosVigentes);
+        List<AlertaBovino> alertas = calcularAlertas(bovinos, hoy, ultimoPesaje, ultimoTacto, ultimoBoqueo, vacsByBovino);
 
         return new MetricasResponse(total, hembras, machos, edadPromedio, bovinosConEdadEstimada,
                 pesoPromedio, conPeso, prenadas, totalTactadas, pctPrenez,
@@ -170,24 +186,45 @@ public class MetricasService {
                 distribucionTacto, alertas);
     }
 
-    // ── Cálculo de alertas — una entrada por animal por problema ─────────────
+    private Map<Long, Pesaje> batchUltimoPesaje(Long estId, Set<Long> bovinoIds) {
+        return pesajeRepository.findUltimosPorEstablecimiento(estId).stream()
+                .filter(p -> bovinoIds.contains(p.getBovino().getId()))
+                .collect(Collectors.toMap(p -> p.getBovino().getId(), p -> p, (a, b) -> a));
+    }
+
+    private Map<Long, Tacto> batchUltimoTacto(Long estId, Set<Long> bovinoIds) {
+        return tactoRepository.findUltimosPorEstablecimiento(estId).stream()
+                .filter(t -> bovinoIds.contains(t.getBovino().getId()))
+                .collect(Collectors.toMap(t -> t.getBovino().getId(), t -> t, (a, b) -> a));
+    }
+
+    private Map<Long, Boqueo> batchUltimoBoqueo(Long estId, Set<Long> bovinoIds) {
+        return boqueoRepository.findUltimosPorEstablecimiento(estId).stream()
+                .filter(b -> bovinoIds.contains(b.getBovino().getId()))
+                .collect(Collectors.toMap(b -> b.getBovino().getId(), b -> b, (a, b) -> a));
+    }
+
+    private Map<Long, List<Vacunacion>> batchVacunaciones(Long estId, Set<Long> bovinoIds) {
+        return vacunacionRepository.findAllByEstablecimientoId(estId).stream()
+                .filter(v -> bovinoIds.contains(v.getBovino().getId()))
+                .collect(Collectors.groupingBy(v -> v.getBovino().getId()));
+    }
 
     private List<AlertaBovino> calcularAlertas(List<Bovino> bovinos, LocalDate hoy,
-                                               Map<String, Integer> vacunados,
-                                               Map<String, Integer> vacunadosVigentes) {
+                                               Map<Long, Pesaje>  ultimoPesaje,
+                                               Map<Long, Tacto>   ultimoTacto,
+                                               Map<Long, Boqueo>  ultimoBoqueo,
+                                               Map<Long, List<Vacunacion>> vacsByBovino) {
         List<AlertaBovino> alertas = new ArrayList<>();
 
         for (Bovino b : bovinos) {
             String car = b.getCaravana();
-            List<Vacunacion> vacs = vacunacionService.getVacunacionesPorBovino(b);
+            List<Vacunacion> vacs = vacsByBovino.getOrDefault(b.getId(), Collections.emptyList());
 
-            // Frigorífico (último tacto)
-            tactoService.getUltimoTacto(b).ifPresent(t -> {
-                if (SituacionEnum.Frigorífico.equals(t.getSituacion()))
-                    alertas.add(new AlertaBovino(car, "Marcada para frigorífico"));
-            });
+            Tacto t = ultimoTacto.get(b.getId());
+            if (t != null && SituacionEnum.Frigorífico.equals(t.getSituacion()))
+                alertas.add(new AlertaBovino(car, "Marcada para frigorífico"));
 
-            // Aftosa vencida (> 6 meses, obligatoria)
             boolean aftosaVigente = vacs.stream()
                     .filter(v -> VacunaTipoEnum.Aftosa.equals(v.getVacuna()))
                     .max(Comparator.comparing(v -> v.getFechaHora()))
@@ -196,7 +233,6 @@ public class MetricasService {
             if (!aftosaVigente)
                 alertas.add(new AlertaBovino(car, "Sin Aftosa vigente (obligatoria cada 6 meses)"));
 
-            // Vacunas anuales vencidas
             for (VacunaTipoEnum tipo : new VacunaTipoEnum[]{
                     VacunaTipoEnum.Carbunco, VacunaTipoEnum.Clostridial,
                     VacunaTipoEnum.IBR, VacunaTipoEnum.BVD}) {
@@ -211,43 +247,36 @@ public class MetricasService {
                     });
             }
 
-            // Peso fuera de rango para su categoría
             if (b.getTipo() != null) {
                 int[] rango = RANGOS_PESO.get(b.getTipo());
-                if (rango != null) {
-                    pesajeService.getUltimoPesaje(b).ifPresent(p -> {
-                        double peso = p.getPeso();
-                        if (peso < rango[0])
-                            alertas.add(new AlertaBovino(car,
-                                    "Peso bajo para " + b.getTipo().name() +
-                                    ": " + (int) peso + " kg (mín. " + rango[0] + " kg)"));
-                        else if (peso > rango[1])
-                            alertas.add(new AlertaBovino(car,
-                                    "Peso alto para " + b.getTipo().name() +
-                                    ": " + (int) peso + " kg (máx. " + rango[1] + " kg)"));
-                    });
+                Pesaje p = ultimoPesaje.get(b.getId());
+                if (rango != null && p != null) {
+                    double peso = p.getPeso();
+                    if (peso < rango[0])
+                        alertas.add(new AlertaBovino(car,
+                                "Peso bajo para " + b.getTipo().name() +
+                                ": " + (int) peso + " kg (mín. " + rango[0] + " kg)"));
+                    else if (peso > rango[1])
+                        alertas.add(new AlertaBovino(car,
+                                "Peso alto para " + b.getTipo().name() +
+                                ": " + (int) peso + " kg (máx. " + rango[1] + " kg)"));
                 }
             }
 
-            // Edad avanzada (boca llena permanente + deterioro mod./severo)
-            boqueoService.getUltimoBoqueo(b).ifPresent(bq -> {
-                if (DientesEnum.Ocho.equals(bq.getDientes())
-                        && DentaduraEnum.Permanente.equals(bq.getDentadura())
-                        && (DeterioroEnum.Moderado.equals(bq.getDeterioro())
-                            || DeterioroEnum.Severo.equals(bq.getDeterioro())))
-                    alertas.add(new AlertaBovino(car,
-                            "Edad avanzada (boca llena, desgaste " +
-                            bq.getDeterioro().name().toLowerCase() + ")"));
-            });
+            Boqueo bq = ultimoBoqueo.get(b.getId());
+            if (bq != null
+                    && DientesEnum.Ocho.equals(bq.getDientes())
+                    && DentaduraEnum.Permanente.equals(bq.getDentadura())
+                    && (DeterioroEnum.Moderado.equals(bq.getDeterioro())
+                        || DeterioroEnum.Severo.equals(bq.getDeterioro())))
+                alertas.add(new AlertaBovino(car,
+                        "Edad avanzada (boca llena, desgaste " +
+                        bq.getDeterioro().name().toLowerCase() + ")"));
         }
 
         return alertas;
     }
 
-    /**
-     * Estima edad en meses usando dentadura + dientes + deterioro.
-     * Fuente: cronología dentaria bovina (INTA / produccion-animal.com.ar).
-     */
     private Long estimarMesesPorBoqueo(Boqueo boqueo) {
         DientesEnum   dientes   = boqueo.getDientes();
         DentaduraEnum dentadura = boqueo.getDentadura();
@@ -283,7 +312,6 @@ public class MetricasService {
             }
         }
 
-        // dentadura no registrada: fallback
         switch (dientes) {
             case Dos:    return 21L;
             case Cuatro: return 33L;

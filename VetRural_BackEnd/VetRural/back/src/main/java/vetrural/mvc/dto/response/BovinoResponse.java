@@ -3,6 +3,7 @@ package vetrural.mvc.dto.response;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import vetrural.mvc.enumerations.EstadoBovinoEnum;
 import vetrural.mvc.enumerations.RazaBovinoEnum;
 import vetrural.mvc.enumerations.SexoEnum;
 import vetrural.mvc.enumerations.TipoBovinoEnum;
@@ -22,4 +23,6 @@ public class BovinoResponse {
     private String lote;
     private String observaciones;
     private String apodo;
+    private EstadoBovinoEnum estado;
+    private LocalDate fechaBaja;
 }

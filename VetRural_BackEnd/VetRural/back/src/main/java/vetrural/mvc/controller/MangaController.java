@@ -56,7 +56,7 @@ public class MangaController {
 
     @PostMapping("/vacunacion")
     public ResponseEntity<VacunacionResponse> registrarVacunacion(@Valid @RequestBody RegistrarVacunacionRequest req) {
-        Vacunacion v = mangaService.registrarVacunacion(req.getBovinoId(), req.getRegistradoPorId(), req.getVacuna());
+        Vacunacion v = mangaService.registrarVacunacion(req.getBovinoId(), req.getRegistradoPorId(), req.getVacuna(), req.getFechaAplicacion());
         URI location = URI.create("/api/manga/" + req.getBovinoId() + "/vacunaciones");
         return ResponseEntity.created(location).body(VacunacionMapper.toResponse(v));
     }
@@ -98,4 +98,12 @@ public class MangaController {
                 .map(VacunacionMapper::toResponse)
                 .toList();
     }
+
+    @GetMapping("/{bovinoId}/pesajes")
+    public List<PesajeResponse> getTodosPesajes(@PathVariable Long bovinoId) {
+        return mangaService.getTodosPesajes(bovinoId).stream()
+                .map(PesajeMapper::toResponse)
+                .toList();
+    }
+
 }

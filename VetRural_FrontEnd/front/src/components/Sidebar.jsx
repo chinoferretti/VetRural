@@ -1,17 +1,17 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { LayoutDashboard, PawPrint, Stethoscope, ClipboardList, BarChart2, MapPin, Mail } from 'lucide-react';
 
 const NAV_BASE = [
-  { to: '/dashboard', label: 'Dashboard',        icon: '🏠' },
-  { to: '/animales',  label: 'Animales',          icon: '🐄' },
-  { to: '/sesion',    label: 'Nueva Sesión',      icon: '🩺' },
-  { to: '/historial', label: 'Historial',         icon: '📋' },
-  { to: '/metricas',  label: 'Métricas',          icon: '📊' },
-  { to: '/partes',    label: 'Partes Sanitarios', icon: '📄' },
+  { to: '/dashboard', label: 'Dashboard',        Icon: LayoutDashboard },
+  { to: '/animales',  label: 'Animales',          Icon: PawPrint },
+  { to: '/sesion',    label: 'Nueva Sesión',      Icon: Stethoscope },
+  { to: '/historial', label: 'Historial',         Icon: ClipboardList },
+  { to: '/metricas',  label: 'Métricas',          Icon: BarChart2 },
 ];
 
-const NAV_PRODUCTOR   = [{ to: '/miembros',     label: 'Gestionar campo', icon: '🏡' }];
-const NAV_NO_PRODUCTOR = [{ to: '/invitaciones', label: 'Invitaciones',   icon: '📬' }];
+const NAV_PRODUCTOR    = [{ to: '/miembros',     label: 'Gestionar campo', Icon: MapPin }];
+const NAV_NO_PRODUCTOR = [{ to: '/invitaciones', label: 'Invitaciones',   Icon: Mail }];
 
 const ROL_LABEL = {
   veterinario: 'Veterinario',
@@ -49,9 +49,9 @@ export default function Sidebar({ open, onClose }) {
         {/* Logo */}
         <div className="px-6 py-6 border-b" style={{ borderColor: 'rgba(255,255,255,0.1)' }}>
           <div className="flex items-center gap-3.5">
-            <div className="w-11 h-11 rounded-xl flex items-center justify-center text-2xl flex-shrink-0"
+            <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
               style={{ backgroundColor: 'var(--verde-claro)' }}>
-              🐄
+              <PawPrint className="w-6 h-6" style={{ color: 'white' }} />
             </div>
             <div>
               <p className="font-bold text-lg leading-tight">VetRural</p>
@@ -76,14 +76,14 @@ export default function Sidebar({ open, onClose }) {
 
         {/* Nav */}
         <nav className="flex-1 px-3 py-7 space-y-1 overflow-y-auto">
-          {navLinks.map(({ to, label, icon }) => (
+          {navLinks.map(({ to, label, Icon }) => (
             <NavLink key={to} to={to} onClick={onClose}
               className={({ isActive }) =>
                 `flex items-center gap-3.5 px-4 py-3.5 rounded-xl text-sm font-medium transition-colors
                  ${isActive ? 'text-white' : 'text-white/70 hover:text-white hover:bg-white/10'}`
               }
               style={({ isActive }) => isActive ? { backgroundColor: 'var(--verde-medio)' } : {}}>
-              <span className="text-lg leading-none flex-shrink-0">{icon}</span>
+              <Icon className="w-5 h-5 flex-shrink-0" />
               <span>{label}</span>
             </NavLink>
           ))}

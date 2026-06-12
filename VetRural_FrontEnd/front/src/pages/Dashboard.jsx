@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useEstablecimiento } from '../context/EstablecimientoContext';
-import { PawPrint, ClipboardList, Stethoscope, BarChart2 } from 'lucide-react';
+import { PawPrint, ClipboardList, Stethoscope, BarChart2, MapPin } from 'lucide-react';
 
 const ACCIONES = [
   {
@@ -30,6 +30,13 @@ const ACCIONES = [
   },
 ];
 
+function saludo() {
+  const h = new Date().getHours();
+  if (h >= 5 && h < 13) return 'Buen día';
+  if (h >= 13 && h < 20) return 'Buenas tardes';
+  return 'Buenas noches';
+}
+
 export default function Dashboard() {
   const { usuario } = useAuth();
   const { seleccionado } = useEstablecimiento();
@@ -42,11 +49,11 @@ export default function Dashboard() {
       {/* Header */}
       <div style={{ flexShrink: 0 }}>
         <h1 className="text-2xl font-bold" style={{ color: 'var(--verde-oscuro)' }}>
-          Buen día, {usuario?.nombre?.split(' ')[0]} 👋
+          {saludo()}, {usuario?.nombre?.split(' ')[0]}
         </h1>
         {seleccionado && (
           <p className="mt-0.5 text-sm font-medium" style={{ color: '#6B7280' }}>
-            🏡 {seleccionado.nombre}{seleccionado.ubicacion ? ` · ${seleccionado.ubicacion}` : ''}
+            {seleccionado.nombre}{seleccionado.ubicacion ? ` · ${seleccionado.ubicacion}` : ''}
           </p>
         )}
       </div>
@@ -62,9 +69,9 @@ export default function Dashboard() {
             flexShrink: 0,
           }}
         >
-          <div className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl flex-shrink-0"
+          <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
             style={{ backgroundColor: 'rgba(255,255,255,0.15)' }}>
-            🏡
+            <MapPin className="w-6 h-6" style={{ color: 'white' }} />
           </div>
           <div className="flex-1 text-left">
             <p className="font-bold text-white" style={{ fontSize: '1rem' }}>

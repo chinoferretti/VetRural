@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { PawPrint, Smile, Scale, Hand, Syringe, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { crearAnimal, getLotes, existeCaravana } from '../api/animalesApi';
 import { crearEstablecimiento, asociarUsuario } from '../api/establecimientosApi';
 import api from '../api/axios';
@@ -40,6 +41,31 @@ const DETERIOROS = ['Nulo', 'Leve', 'Moderado', 'Severo'];
 const fechaLocal = () => {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+};
+
+const hoy = () => new Date();
+
+function edadDesdeNacimiento(fechaStr) {
+  if (!fechaStr) return null;
+  const nac = new Date(fechaStr + 'T00:00:00');
+  if (isNaN(nac.getTime())) return null;
+  const meses = (hoy() - nac) / (1000 * 60 * 60 * 24 * 30.44);
+  if (meses < 0) return null;
+  if (meses < 1)  return `${Math.floor(meses * 30)} días`;
+  if (meses < 24) return `${Math.round(meses)} meses`;
+  return `${(meses / 12).toFixed(1)} años`;
+}
+
+// Rangos de edad esperados por tipo (en meses)
+const RANGO_EDAD_TIPO = {
+  Ternera:   [0, 12],
+  Vaquillona:[12, 48],
+  Vaca:      [36, Infinity],
+  Ternero:   [0, 12],
+  Novillito: [12, 30],
+  Novillo:   [24, Infinity],
+  Torito:    [12, 30],
+  Toro:      [24, Infinity],
 };
 
 const VACUNA_HINTS = {
@@ -94,11 +120,17 @@ function Field({ label, required, children }) {
   );
 }
 
-function Seccion({ titulo, icono, children }) {
+function Seccion({ titulo, Icon, children }) {
   return (
     <div className="card flex flex-col" style={{ gap: '1.5rem', padding: '1.75rem' }}>
       <h2 className="font-bold text-lg flex items-center gap-2" style={{ color: 'var(--verde-oscuro)' }}>
-        <span>{icono}</span> {titulo}
+        {Icon && (
+          <span className="flex items-center justify-center rounded-lg flex-shrink-0"
+            style={{ backgroundColor: '#EBF7F1', border: '1.5px solid #C8E6D8', padding: '0.3rem' }}>
+            <Icon className="w-4 h-4" style={{ color: 'var(--verde-medio)' }} />
+          </span>
+        )}
+        {titulo}
       </h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-5">
         {children}
@@ -120,6 +152,27 @@ export default function NuevoAnimal() {
   const [nuevoLote, setNuevoLote] = useState('');
   const [agregandoLote, setAgregandoLote] = useState(false);
   const [caravanaExiste, setCaravanaExiste] = useState(false);
+
+  // Advertencias no bloqueantes (tipo/edad, boqueo incompleto)
+  const advertencias = useMemo(() => {
+    const w = [];
+    if (form.fechaNacimiento && form.tipo) {
+      const nac = new Date(form.fechaNacimiento + 'T00:00:00');
+      if (!isNaN(nac.getTime())) {
+        const meses = (new Date() - nac) / (1000 * 60 * 60 * 24 * 30.44);
+        const rango = RANGO_EDAD_TIPO[form.tipo];
+        if (rango && (meses < rango[0] || meses > rango[1])) {
+          const [min, max] = rango;
+          const rangoStr = max === Infinity ? `más de ${min} meses` : `${min}–${max} meses`;
+          w.push(`La edad calculada (${edadDesdeNacimiento(form.fechaNacimiento)}) no coincide con el tipo "${form.tipo}" (se esperan ${rangoStr}).`);
+        }
+      }
+    }
+    if (form.boqueo_dientes && !form.boqueo_dentadura) {
+      w.push('Registraste dientes en el boqueo pero no indicaste el tipo de dentadura.');
+    }
+    return w;
+  }, [form.fechaNacimiento, form.tipo, form.boqueo_dientes, form.boqueo_dentadura]);
 
   // Cargar lotes del backend al montar
   useEffect(() => {
@@ -153,9 +206,50 @@ export default function NuevoAnimal() {
 
   const validar = () => {
     const e = {};
-    if (!form.caravana.trim()) e.caravana = 'La caravana es obligatoria';
-    else if (caravanaExiste)   e.caravana = 'Esta caravana ya está registrada en el sistema';
-    if (!form.sexo)            e.sexo     = 'El sexo es obligatorio';
+
+    // Caravana
+    if (!form.caravana.trim()) {
+      e.caravana = 'La caravana es obligatoria';
+    } else if (form.caravana.length < 15) {
+      e.caravana = `La caravana debe tener 15 caracteres (actualmente: ${form.caravana.length})`;
+    } else if (!/^[A-Z0-9]{15}$/.test(form.caravana)) {
+      e.caravana = 'La caravana solo puede contener letras mayúsculas y números';
+    } else if (caravanaExiste) {
+      e.caravana = 'Esta caravana ya está registrada en el sistema';
+    }
+
+    // Sexo
+    if (!form.sexo) e.sexo = 'El sexo es obligatorio';
+
+    // Fecha de nacimiento
+    if (form.fechaNacimiento) {
+      const nac = new Date(form.fechaNacimiento + 'T00:00:00');
+      if (isNaN(nac.getTime())) {
+        e.fechaNacimiento = 'La fecha de nacimiento no es válida';
+      } else if (nac > new Date()) {
+        e.fechaNacimiento = 'La fecha de nacimiento no puede ser futura';
+      } else {
+        const aniosAtras = (new Date() - nac) / (1000 * 60 * 60 * 24 * 365.25);
+        if (aniosAtras > 20) e.fechaNacimiento = 'La fecha de nacimiento parece incorrecta (más de 20 años)';
+      }
+    }
+
+    // Peso
+    if (form.peso) {
+      const p = Number(form.peso);
+      if (isNaN(p) || p <= 0)  e.peso = 'El peso debe ser un número mayor a 0';
+      else if (p < 10)          e.peso = 'El peso parece muy bajo (mínimo 10 kg)';
+      else if (p > 1200)        e.peso = 'El peso parece muy alto (máximo 1200 kg)';
+    }
+
+    // Vacunas: no pueden ser futuras
+    const vacunasCampos = ['vac_aftosa','vac_brucelosis','vac_carbunco','vac_clostridial','vac_ibr','vac_bvd'];
+    for (const campo of vacunasCampos) {
+      if (form[campo] && new Date(form[campo] + 'T00:00:00') > new Date()) {
+        e[campo] = 'La fecha de aplicación no puede ser futura';
+      }
+    }
+
     return e;
   };
 
@@ -260,7 +354,7 @@ const handleSubmit = async (e) => {
     ];
     for (const [campo, vacuna] of vacunas) {
       if (form[campo]) {
-        await api.post('/manga/vacunacion', { bovinoId, registradoPorId, vacuna });
+        await api.post('/manga/vacunacion', { bovinoId, registradoPorId, vacuna, fechaAplicacion: form[campo] });
       }
     }
 
@@ -281,8 +375,8 @@ const handleSubmit = async (e) => {
   if (exito) {
     return (
       <div className="flex flex-col items-center justify-center py-28 gap-5">
-        <div className="w-20 h-20 rounded-2xl flex items-center justify-center text-4xl" style={{ backgroundColor: '#D1FAE5' }}>
-          ✅
+        <div className="w-20 h-20 rounded-2xl flex items-center justify-center" style={{ backgroundColor: '#D1FAE5' }}>
+          <CheckCircle2 className="w-10 h-10" style={{ color: 'var(--verde-medio)' }} />
         </div>
         <p className="text-2xl font-bold" style={{ color: 'var(--verde-oscuro)' }}>Animal registrado</p>
         <p style={{ color: '#6B7280' }}>Redirigiendo al listado...</p>
@@ -302,21 +396,30 @@ const handleSubmit = async (e) => {
       <form onSubmit={handleSubmit} className="flex flex-col" style={{ gap: '1.75rem' }}>
 
         {/* ── Datos generales ── */}
-        <Seccion titulo="Datos generales" icono="🐄">
+        <Seccion titulo="Datos generales" Icon={PawPrint}>
           <Field label="Caravana electrónica" required>
-            <input
-              autoFocus
-              value={form.caravana}
-              onChange={e => set('caravana', e.target.value.toUpperCase())}
-              placeholder="000000000000000 (15 dígitos)"
-              maxLength={15}
-              className={inputCls}
-              style={{ ...inputSty, borderColor: errores.caravana || caravanaExiste ? '#EF4444' : '#D1D5DB', fontFamily: 'monospace', fontSize: '1rem' }}
-            />
-            {caravanaExiste && !errores.caravana && (
-              <p className="text-xs mt-1" style={{ color: '#EF4444' }}>Esta caravana ya está registrada en el sistema</p>
-            )}
+            <div style={{ position: 'relative' }}>
+              <input
+                autoFocus
+                value={form.caravana}
+                onChange={e => set('caravana', e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
+                placeholder="000000000000000"
+                maxLength={15}
+                className={inputCls}
+                style={{ ...inputSty, borderColor: errores.caravana ? '#EF4444' : form.caravana.length === 15 ? '#10B981' : '#D1D5DB', fontFamily: 'monospace', fontSize: '1rem', paddingRight: '3.5rem' }}
+              />
+              <span style={{
+                position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)',
+                fontSize: '0.75rem', fontWeight: 700,
+                color: form.caravana.length === 15 ? '#10B981' : form.caravana.length > 0 ? '#F59E0B' : '#9CA3AF',
+              }}>
+                {form.caravana.length}/15
+              </span>
+            </div>
             {errores.caravana && <p className="text-xs mt-1" style={{ color: '#EF4444' }}>{errores.caravana}</p>}
+            {!errores.caravana && form.caravana.length === 15 && !caravanaExiste && (
+              <p className="text-xs mt-1 font-semibold" style={{ color: '#10B981' }}>✓ Formato correcto</p>
+            )}
           </Field>
 
           <Field label="Sexo" required>
@@ -429,18 +532,37 @@ const handleSubmit = async (e) => {
           </Field>
 
           <Field label="Fecha de nacimiento">
-            <input
-              type="date"
-              value={form.fechaNacimiento}
-              onChange={e => set('fechaNacimiento', e.target.value)}
-              className={inputCls}
-              style={inputSty}
-            />
+            <div className="flex gap-2">
+              <input
+                type="date"
+                value={form.fechaNacimiento}
+                onChange={e => set('fechaNacimiento', e.target.value)}
+                max={fechaLocal()}
+                className={inputCls}
+                style={{ ...inputSty, flex: 1, borderColor: errores.fechaNacimiento ? '#EF4444' : '#D1D5DB' }}
+              />
+              <button
+                type="button"
+                onClick={() => set('fechaNacimiento', fechaLocal())}
+                className="flex-shrink-0 rounded-xl font-bold text-sm"
+                style={{ backgroundColor: 'var(--verde-medio)', color: 'white', padding: '0 0.875rem' }}
+              >
+                HOY
+              </button>
+            </div>
+            {errores.fechaNacimiento && (
+              <p className="text-xs mt-1" style={{ color: '#EF4444' }}>{errores.fechaNacimiento}</p>
+            )}
+            {!errores.fechaNacimiento && edadDesdeNacimiento(form.fechaNacimiento) && (
+              <p className="text-xs mt-1 font-semibold" style={{ color: '#6B7280' }}>
+                Edad: {edadDesdeNacimiento(form.fechaNacimiento)}
+              </p>
+            )}
           </Field>
         </Seccion>
 
         {/* ── Boqueo ── */}
-        <Seccion titulo="Boqueo" icono="🦷">
+        <Seccion titulo="Boqueo" Icon={Smile}>
           <Field label="Cantidad de dientes">
             <select value={form.boqueo_dientes} onChange={e => set('boqueo_dientes', e.target.value)} className={inputCls} style={inputSty}>
               <option value=""></option>
@@ -464,21 +586,25 @@ const handleSubmit = async (e) => {
         </Seccion>
 
         {/* ── Pesaje ── */}
-        <Seccion titulo="Pesaje" icono="⚖️">
+        <Seccion titulo="Pesaje" Icon={Scale}>
           <Field label="Peso del animal (kg)">
             <input
-              type="number" min="0"
+              type="number" min="10" max="1200"
               value={form.peso}
               onChange={e => set('peso', e.target.value)}
+              onWheel={e => e.target.blur()}
               placeholder="Ej: 420"
-              className={inputCls} style={inputSty}
+              className={inputCls}
+              style={{ ...inputSty, borderColor: errores.peso ? '#EF4444' : '#D1D5DB' }}
             />
+            {errores.peso && <p className="text-xs mt-1" style={{ color: '#EF4444' }}>{errores.peso}</p>}
+            {!errores.peso && form.peso && <p className="text-xs mt-1" style={{ color: '#9CA3AF' }}>Rango válido: 10–1200 kg</p>}
           </Field>
         </Seccion>
 
         {/* ── Tacto (solo hembras) ── */}
         {form.sexo === 'Hembra' && (
-          <Seccion titulo="Tacto" icono="🔍">
+          <Seccion titulo="Tacto" Icon={Hand}>
             <Field label="Situación">
               <select
                 value={form.tacto_situacion}
@@ -512,7 +638,7 @@ const handleSubmit = async (e) => {
         )}
 
         {/* ── Vacunación ── */}
-        <Seccion titulo="Vacunación — Última dosis" icono="💉">
+        <Seccion titulo="Vacunación — Última dosis" Icon={Syringe}>
           {[
             ['vac_aftosa',      'Aftosa'],
             ['vac_brucelosis',  'Brucelosis'],
@@ -527,7 +653,9 @@ const handleSubmit = async (e) => {
                   type="date"
                   value={form[campo]}
                   onChange={e => set(campo, e.target.value)}
-                  className={inputCls} style={{ ...inputSty, flex: 1 }}
+                  max={fechaLocal()}
+                  className={inputCls}
+                  style={{ ...inputSty, flex: 1, borderColor: errores[campo] ? '#EF4444' : '#D1D5DB' }}
                 />
                 <button
                   type="button"
@@ -538,12 +666,27 @@ const handleSubmit = async (e) => {
                   HOY
                 </button>
               </div>
-              {VACUNA_HINTS[campo] && (
-                <p className="text-xs mt-0.5" style={{ color: '#9CA3AF' }}>{VACUNA_HINTS[campo]}</p>
-              )}
+              {errores[campo]
+                ? <p className="text-xs mt-0.5" style={{ color: '#EF4444' }}>{errores[campo]}</p>
+                : VACUNA_HINTS[campo] && <p className="text-xs mt-0.5" style={{ color: '#9CA3AF' }}>{VACUNA_HINTS[campo]}</p>
+              }
             </Field>
           ))}
         </Seccion>
+
+        {/* ── Advertencias no bloqueantes ── */}
+        {advertencias.length > 0 && (
+          <div className="rounded-2xl px-4 py-3 flex flex-col gap-1.5"
+            style={{ backgroundColor: '#FFFBEB', border: '1.5px solid #FDE68A' }}>
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 flex-shrink-0" style={{ color: '#D97706' }} />
+              <p className="text-sm font-bold" style={{ color: '#92400E' }}>Verificá antes de continuar</p>
+            </div>
+            {advertencias.map((w, i) => (
+              <p key={i} className="text-sm" style={{ color: '#B45309' }}>• {w}</p>
+            ))}
+          </div>
+        )}
 
         {/* ── Acciones ── */}
         {errorSubmit && (

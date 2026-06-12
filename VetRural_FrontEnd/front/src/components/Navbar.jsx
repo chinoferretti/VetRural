@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useEstablecimiento } from '../context/EstablecimientoContext';
 import { useAuth } from '../context/AuthContext';
 import EstablecimientoModal from './EstablecimientoModal';
-import { ChevronLeft, Leaf } from 'lucide-react';
+import { ChevronLeft, Leaf, MapPin } from 'lucide-react';
 
 export default function Navbar() {
   const { seleccionado } = useEstablecimiento();
@@ -80,7 +80,7 @@ export default function Navbar() {
               padding: '0.5rem 0.75rem',
             }}
           >
-            <span style={{ fontSize: '1.2rem', flexShrink: 0 }}>🏡</span>
+            <MapPin className="w-5 h-5 flex-shrink-0" style={{ color: 'white' }} />
             <div className="hidden sm:block text-left" style={{ maxWidth: '150px' }}>
               <p className="text-xs font-medium leading-tight" style={{ color: 'rgba(255,255,255,0.6)' }}>Establecimiento</p>
               <p className="text-sm font-bold truncate leading-tight" style={{ color: seleccionado ? 'white' : '#FCA5A5' }}>

@@ -52,3 +52,15 @@ export const getHistorialAnimal = async (caravana) => {
   const response = await api.get(`/bovinos/${caravana}/historial`);
   return response.data;
 };
+
+// PUT /bovinos/:id/dar-baja  →  soft delete con estado
+export const darBajaAnimal = async (id, data) => {
+  const response = await api.put(`/bovinos/${id}/dar-baja`, data);
+  return response.data;
+};
+
+// GET /establecimientos/:id/bovinos/bajas  →  animales dados de baja del establecimiento
+export const getAnimalesDadosDeBaja = async (establecimientoId) => {
+  const response = await api.get(`/establecimientos/${establecimientoId}/bovinos/bajas`);
+  return response.data;
+};

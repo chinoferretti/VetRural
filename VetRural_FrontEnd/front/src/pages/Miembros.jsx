@@ -4,9 +4,9 @@ import { getMiembros, getInvitaciones, invitar, removerMiembro, cancelarInvitaci
 import LoadingSpinner from '../components/LoadingSpinner';
 
 const ROL_CONFIG = {
-  veterinario: { label: 'Veterinario', color: '#065F46', bg: '#D1FAE5', icono: '⚕️' },
-  productor:   { label: 'Productor',   color: '#1E40AF', bg: '#DBEAFE', icono: '🏡' },
-  otros:       { label: 'Otros',       color: '#6B21A8', bg: '#EDE9FE', icono: '👷' },
+  veterinario: { label: 'Veterinario', color: '#065F46', bg: '#D1FAE5' },
+  productor:   { label: 'Productor',   color: 'var(--verde-oscuro)', bg: '#EBF7F1' },
+  otros:       { label: 'Colaborador', color: '#374151', bg: '#F3F4F6' },
 };
 
 const ESTADO_CONFIG = {
@@ -20,7 +20,7 @@ function Badge({ tipo, valor }) {
   return (
     <span className="text-xs font-semibold px-2.5 py-1 rounded-full"
       style={{ backgroundColor: cfg.bg, color: cfg.color }}>
-      {cfg.icono ? `${cfg.icono} ` : ''}{cfg.label || valor}
+      {cfg.label || valor}
     </span>
   );
 }
@@ -139,7 +139,7 @@ export default function Miembros() {
               backgroundColor: feedback.tipo === 'ok' ? '#D1FAE5' : '#FEE2E2',
               color: feedback.tipo === 'ok' ? '#065F46' : '#991B1B',
             }}>
-            {feedback.tipo === 'ok' ? '✅ ' : '❌ '}{feedback.msg}
+            {feedback.msg}
           </div>
         )}
       </div>
@@ -156,8 +156,8 @@ export default function Miembros() {
                 className="bg-white rounded-2xl flex items-center gap-4"
                 style={{ border: '1.5px solid #E5E7EB', padding: '1rem 1.25rem' }}>
                 <div className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0"
-                  style={{ backgroundColor: '#FEF3C7', fontSize: '1rem' }}>
-                  ✉️
+                  style={{ backgroundColor: '#EBF7F1', border: '1px solid #C8E6D8' }}>
+                  <span className="text-sm font-bold" style={{ color: 'var(--verde-medio)' }}>@</span>
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold truncate" style={{ color: '#111827' }}>{inv.email}</p>

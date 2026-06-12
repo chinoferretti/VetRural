@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { formatFecha } from '../utils/formatters';
 import { generarHTMLReporte } from '../utils/reporteUtils';
-import { Download, Trash2 } from 'lucide-react';
+import { Download, Trash2, AlertTriangle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const TRABAJO_COLORES = {
@@ -24,7 +24,6 @@ function descargarMetricas(sesion) {
     trabajosDisplay:  sesion.trabajos,
     metricas:         sesion.metricas || {},
     animalesAtendidos: sesion.animalesAtendidos,
-    tratamientos:     sesion.tratamientos,
   });
   const blob = new Blob([html], { type: 'text/html' });
   const url  = URL.createObjectURL(blob);
@@ -100,7 +99,6 @@ export default function Historial() {
       {/* Lista */}
       {filtradas.length === 0 ? (
         <div className="text-center py-24">
-          <p className="text-5xl mb-4">📋</p>
           <p className="text-lg font-semibold" style={{ color: '#374151' }}>Sin resultados</p>
         </div>
       ) : (
@@ -146,7 +144,7 @@ export default function Historial() {
                 {v.metricas?.outliers?.length > 0 && (
                   <span className="flex items-center gap-1 px-2 py-1 rounded-xl text-xs font-semibold"
                     style={{ backgroundColor: '#FEF3C7', color: '#92400E' }}>
-                    ⚠️ {v.metricas.outliers.length} fuera de norma
+                    <AlertTriangle className="w-3 h-3" /> {v.metricas.outliers.length} fuera de norma
                   </span>
                 )}
               </div>

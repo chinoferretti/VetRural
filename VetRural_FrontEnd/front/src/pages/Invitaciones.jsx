@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useEstablecimiento } from '../context/EstablecimientoContext';
 import { getInvitaciones, removerInvitacion } from '../api/invitacionesApi';
+import { MapPin } from 'lucide-react';
 
 export default function Invitaciones() {
   const { usuario } = useAuth();
@@ -44,13 +45,12 @@ export default function Invitaciones() {
             color: feedback.tipo === 'ok' ? '#065F46' : '#1E40AF',
           }}
         >
-          {feedback.tipo === 'ok' ? '✅ ' : 'ℹ️ '}{feedback.msg}
+          {feedback.msg}
         </div>
       )}
 
       {invitaciones.length === 0 ? (
         <div className="card text-center" style={{ padding: '4rem 2rem' }}>
-          <div className="text-5xl mb-4">📭</div>
           <p className="text-lg font-semibold mb-2" style={{ color: '#374151' }}>
             Sin invitaciones pendientes
           </p>
@@ -68,10 +68,10 @@ export default function Invitaciones() {
             >
               <div className="flex items-start gap-4">
                 <div
-                  className="w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0 text-3xl"
+                  className="w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0"
                   style={{ backgroundColor: '#EBF7F1', border: '1.5px solid #C8E6D8' }}
                 >
-                  🏡
+                  <MapPin className="w-6 h-6" style={{ color: 'var(--verde-medio)' }} />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="font-bold text-lg" style={{ color: 'var(--verde-oscuro)' }}>

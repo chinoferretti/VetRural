@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useEstablecimiento } from '../context/EstablecimientoContext';
 import { useAuth } from '../context/AuthContext';
 import { getInvitaciones, removerInvitacion } from '../api/invitacionesApi';
+import { MapPin, Trash2 } from 'lucide-react';
 
 export default function EstablecimientoModal({ onClose, requerido = false }) {
   const { lista, seleccionado, seleccionar, crear, eliminar, unirse } = useEstablecimiento();
@@ -54,7 +55,6 @@ export default function EstablecimientoModal({ onClose, requerido = false }) {
       >
         <div className="w-full max-w-lg rounded-2xl bg-white" style={{ padding: '2rem', maxHeight: '90vh', overflowY: 'auto' }}>
           <div className="text-center mb-6">
-            <div className="text-5xl mb-3">📬</div>
             <h2 className="text-xl font-bold mb-2" style={{ color: 'var(--verde-oscuro)' }}>
               Sin establecimiento asignado
             </h2>
@@ -72,7 +72,7 @@ export default function EstablecimientoModal({ onClose, requerido = false }) {
                 {invitaciones.map(inv => (
                   <div key={inv.id} className="rounded-2xl p-4" style={{ border: '2px solid #E5E7EB' }}>
                     <div className="flex items-start gap-3 mb-3">
-                      <span style={{ fontSize: '1.6rem' }}>🏡</span>
+                      <MapPin className="w-5 h-5" style={{ color: 'var(--verde-medio)' }} />
                       <div className="flex-1 min-w-0">
                         <p className="font-bold" style={{ color: 'var(--verde-oscuro)' }}>{inv.establecimiento.nombre}</p>
                         <p className="text-sm" style={{ color: '#6B7280' }}>{inv.establecimiento.ubicacion}</p>
@@ -175,7 +175,7 @@ export default function EstablecimientoModal({ onClose, requerido = false }) {
                     }}
                   >
                     <div className="flex items-center gap-3">
-                      <span style={{ fontSize: '1.6rem' }}>🏡</span>
+                      <MapPin className="w-5 h-5" style={{ color: 'var(--verde-medio)' }} />
                       <div className="flex-1 min-w-0">
                         <p className="font-bold" style={{ color: 'var(--verde-oscuro)' }}>{est.nombre}</p>
                         <p className="text-sm" style={{ color: '#6B7280' }}>{est.ubicacion}</p>
@@ -217,7 +217,7 @@ export default function EstablecimientoModal({ onClose, requerido = false }) {
                                 style={{ color: '#D1D5DB' }}
                                 title="Eliminar"
                               >
-                                🗑️
+                                <Trash2 className="w-4 h-4" />
                               </button>
                             )}
                           </>
@@ -249,7 +249,7 @@ export default function EstablecimientoModal({ onClose, requerido = false }) {
                   {invitaciones.map(inv => (
                     <div key={inv.id} className="rounded-xl p-3" style={{ border: '1.5px solid #E5E7EB' }}>
                       <div className="flex items-center gap-3">
-                        <span style={{ fontSize: '1.2rem' }}>🏡</span>
+                        <MapPin className="w-4 h-4" style={{ color: 'var(--verde-medio)' }} />
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-bold truncate" style={{ color: 'var(--verde-oscuro)' }}>{inv.establecimiento.nombre}</p>
                           <p className="text-xs" style={{ color: '#6B7280' }}>{inv.establecimiento.ubicacion} · de {inv.remitente}</p>

@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.*;
 import vetrural.mvc.dto.request.ActualizarBovinoRequest;
 import vetrural.mvc.dto.request.CrearBovinoRapidoRequest;
 import vetrural.mvc.dto.request.CrearBovinoRequest;
+import vetrural.mvc.dto.request.DarBajaBovinoRequest;
 import vetrural.mvc.dto.response.BovinoResponse;
 import vetrural.mvc.dto.response.HistorialBovinoResponse;
 import vetrural.mvc.entity.Bovino;
@@ -45,12 +46,10 @@ public class BovinoController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-
     @GetMapping("/existe")
     public boolean existePorCaravana(@RequestParam String caravana) {
         return bovinoService.existePorCaravana(caravana);
     }
-
 
     @PostMapping
     public ResponseEntity<BovinoResponse> crear(@Valid @RequestBody CrearBovinoRequest req) {
@@ -72,6 +71,12 @@ public class BovinoController {
     public ResponseEntity<Void> eliminarBovino(@PathVariable Long id){
         bovinoService.eliminarBovino(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @PutMapping("/{id}/dar-baja")
+    public ResponseEntity<BovinoResponse> darBaja(@PathVariable Long id, @Valid @RequestBody DarBajaBovinoRequest req) {
+        Bovino bovino = bovinoService.darBaja(id, req.getEstado(), req.getMotivoBaja());
+        return ResponseEntity.ok(BovinoMapper.toResponse(bovino));
     }
 
     @PostMapping("/rapido")

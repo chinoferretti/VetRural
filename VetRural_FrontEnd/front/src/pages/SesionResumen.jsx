@@ -128,7 +128,6 @@ export default function SesionResumen() {
           establecimiento:      state.establecimiento ?? '',
           animalesAtendidos:    registros.map(r => r.animal.caravana),
           trabajos:             trabajos.map(t => TRABAJOS_CONFIG[t]?.label ?? t),
-          tratamientos:         [],
           metricas:             m,
         };
         localStorage.setItem(historialKey, JSON.stringify([sesion, ...previas]));

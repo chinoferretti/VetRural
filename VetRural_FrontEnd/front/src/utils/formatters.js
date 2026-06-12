@@ -18,10 +18,3 @@ export const estadoColor = {
   critico: { bg: '#FEE2E2', text: '#991B1B', dot: '#EF4444' },
 };
 
-export const tipoParteColor = {
-  Emergencia: '#FEE2E2',
-  Vacunación: '#D1FAE5',
-  Tratamiento: '#FEF3C7',
-  Control: '#DBEAFE',
-  Evaluación: '#EDE9FE',
-};

@@ -214,11 +214,10 @@ export default function SesionRegistro() {
     for (const [campo, vacuna] of vacunas) {
       if (tiene('vacunacion') && form[campo]) {
         promises.push(
-          api.post('/manga/vacunacion', { bovinoId, registradoPorId, vacuna })
+          api.post('/manga/vacunacion', { bovinoId, registradoPorId, vacuna, fechaAplicacion: form[campo] })
         );
       }
     }
-
     const resultados = await Promise.allSettled(promises);
     const fallidos = resultados.filter(r => r.status === 'rejected');
     if (fallidos.length > 0) {
@@ -400,7 +399,7 @@ export default function SesionRegistro() {
       {/* Error de guardado */}
       {errorGuardado && (
         <div className="rounded-xl px-4 py-3 text-sm font-medium" style={{ backgroundColor: '#FEE2E2', color: '#991B1B', flexShrink: 0 }}>
-          ⚠️ {errorGuardado}
+          {errorGuardado}
         </div>
       )}
 

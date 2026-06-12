@@ -18,32 +18,20 @@ import vetrural.mvc.enumerations.VacunaTipoEnum;
 import vetrural.mvc.repository.EventoSanitarioRepository;
 import vetrural.mvc.service.*;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
 @Service
 public class MangaServiceImpl implements MangaService {
 
-    @Autowired
-    private BovinoService bovinoService;
-
-    @Autowired
-    private UsuarioService usuarioService;
-
-    @Autowired
-    private TactoService tactoService;
-
-    @Autowired
-    private PesajeService pesajeService;
-
-    @Autowired
-    private BoqueoService boqueoService;
-
-    @Autowired
-    private VacunacionService vacunacionService;
-
-    @Autowired
-    private EventoSanitarioRepository eventoSanitarioRepository;
+    @Autowired private BovinoService bovinoService;
+    @Autowired private UsuarioService usuarioService;
+    @Autowired private TactoService tactoService;
+    @Autowired private PesajeService pesajeService;
+    @Autowired private BoqueoService boqueoService;
+    @Autowired private VacunacionService vacunacionService;
+    @Autowired private EventoSanitarioRepository eventoSanitarioRepository;
 
     @Override
     public Tacto registrarTacto(Long bovinoId, Long registradoPorId, SituacionEnum situacion, PeriodoEnum periodo) {
@@ -67,10 +55,10 @@ public class MangaServiceImpl implements MangaService {
     }
 
     @Override
-    public Vacunacion registrarVacunacion(Long bovinoId, Long registradoPorId, VacunaTipoEnum vacuna) {
+    public Vacunacion registrarVacunacion(Long bovinoId, Long registradoPorId, VacunaTipoEnum vacuna, LocalDate fechaAplicacion) {
         Bovino bovino = bovinoService.obtenerOFallar(bovinoId);
         Usuario registradoPor = validarUsuarioHabilitado(registradoPorId);
-        return vacunacionService.registrarVacunacion(bovino, registradoPor, vacuna);
+        return vacunacionService.registrarVacunacion(bovino, registradoPor, vacuna, fechaAplicacion);
     }
 
     @Override
@@ -94,6 +82,11 @@ public class MangaServiceImpl implements MangaService {
     }
 
     @Override
+    public List<Pesaje> getTodosPesajes(Long bovinoId) {
+        return pesajeService.getPesajesPorBovino(bovinoService.obtenerOFallar(bovinoId));
+    }
+
+    @Override
     public List<EventoSanitario> getCronologia(Long bovinoId) {
         return eventoSanitarioRepository.findByBovinoOrderByFechaHoraDesc(bovinoService.obtenerOFallar(bovinoId));
     }
@@ -101,7 +94,7 @@ public class MangaServiceImpl implements MangaService {
     private Usuario validarUsuarioHabilitado(Long idUsuario) {
         Usuario u = usuarioService.obtenerOFallar(idUsuario);
         if (!usuarioService.puedeRegistrarEventoSanitario(u)) {
-            throw new IllegalArgumentException("El usuario " + idUsuario + " no está habilitado para registrar eventos sanitarios (debe ser Veterinario o Anotador)");
+            throw new IllegalArgumentException("El usuario " + idUsuario + " no está habilitado para registrar eventos sanitarios");
         }
         return u;
     }

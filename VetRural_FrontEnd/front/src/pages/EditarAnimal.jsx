@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { PawPrint, Smile, Scale, Hand, Syringe, CheckCircle2 } from 'lucide-react';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { getAnimalById, actualizarAnimal, getLotes } from '../api/animalesApi';
 import api from '../api/axios';
@@ -62,11 +63,17 @@ function Field({ label, children, nota }) {
   );
 }
 
-function Seccion({ titulo, icono, children }) {
+function Seccion({ titulo, Icon, children }) {
   return (
     <div className="card flex flex-col" style={{ gap: '1.5rem', padding: '1.75rem' }}>
       <h2 className="font-bold text-lg flex items-center gap-2" style={{ color: 'var(--verde-oscuro)' }}>
-        <span>{icono}</span> {titulo}
+        {Icon && (
+          <span className="flex items-center justify-center rounded-lg flex-shrink-0"
+            style={{ backgroundColor: '#EBF7F1', border: '1.5px solid #C8E6D8', padding: '0.3rem' }}>
+            <Icon className="w-4 h-4" style={{ color: 'var(--verde-medio)' }} />
+          </span>
+        )}
+        {titulo}
       </h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-5">
         {children}
@@ -229,7 +236,7 @@ export default function EditarAnimal() {
       ];
       for (const [campo, vacuna] of vacunas) {
         if (form[campo] && form[campo] !== originalClinico[campo]) {
-          await api.post('/manga/vacunacion', { bovinoId, registradoPorId, vacuna });
+          await api.post('/manga/vacunacion', { bovinoId, registradoPorId, vacuna, fechaAplicacion: form[campo] });
         }
       }
 
@@ -245,7 +252,6 @@ export default function EditarAnimal() {
   if (cargando) return <LoadingSpinner texto="Cargando animal..." />;
   if (!form)    return (
     <div className="flex flex-col items-center justify-center py-24 gap-5">
-      <p className="text-6xl">🐄</p>
       <p className="text-xl font-bold" style={{ color: '#374151' }}>Animal no encontrado</p>
       <button onClick={() => navigate('/animales')} className="btn-primary">Volver</button>
     </div>
@@ -254,7 +260,9 @@ export default function EditarAnimal() {
   if (exito) {
     return (
       <div className="flex flex-col items-center justify-center py-28 gap-5">
-        <div className="w-20 h-20 rounded-2xl flex items-center justify-center text-4xl" style={{ backgroundColor: '#D1FAE5' }}>✅</div>
+        <div className="w-20 h-20 rounded-2xl flex items-center justify-center" style={{ backgroundColor: '#D1FAE5' }}>
+          <CheckCircle2 className="w-10 h-10" style={{ color: 'var(--verde-medio)' }} />
+        </div>
         <p className="text-2xl font-bold" style={{ color: 'var(--verde-oscuro)' }}>Cambios guardados</p>
         <p style={{ color: '#6B7280' }}>Redirigiendo al listado...</p>
       </div>
@@ -275,7 +283,7 @@ export default function EditarAnimal() {
       <form onSubmit={handleSubmit} className="flex flex-col" style={{ gap: '1.75rem' }}>
 
         {/* ── Datos generales ── */}
-        <Seccion titulo="Datos generales" icono="🐄">
+        <Seccion titulo="Datos generales" Icon={PawPrint}>
           <CampoFijo label="Caravana electrónica" valor={form.caravana} />
           <CampoFijo label="Sexo" valor={form.sexo} />
 
@@ -343,13 +351,23 @@ export default function EditarAnimal() {
           </Field>
 
           <Field label="Fecha de nacimiento" nota="Opcional. Si no se conoce, el boqueo determinará la edad.">
-            <input type="date" value={form.fechaNacimiento} onChange={e => set('fechaNacimiento', e.target.value)}
-              className={inputCls} style={inputSty} />
+            <div className="flex gap-2">
+              <input type="date" value={form.fechaNacimiento} onChange={e => set('fechaNacimiento', e.target.value)}
+                className={inputCls} style={{ ...inputSty, flex: 1 }} />
+              <button
+                type="button"
+                onClick={() => set('fechaNacimiento', fechaLocal())}
+                className="flex-shrink-0 rounded-xl font-bold text-sm"
+                style={{ backgroundColor: 'var(--verde-medio)', color: 'white', padding: '0 0.875rem' }}
+              >
+                HOY
+              </button>
+            </div>
           </Field>
         </Seccion>
 
         {/* ── Boqueo ── */}
-        <Seccion titulo="Boqueo" icono="🦷">
+        <Seccion titulo="Boqueo" Icon={Smile}>
           <Field label="Cantidad de dientes" nota={notaClinico}>
             <select value={form.boqueo_dientes} onChange={e => set('boqueo_dientes', e.target.value)} className={inputCls} style={inputSty}>
               <option value=""></option>
@@ -371,7 +389,7 @@ export default function EditarAnimal() {
         </Seccion>
 
         {/* ── Pesaje ── */}
-        <Seccion titulo="Pesaje" icono="⚖️">
+        <Seccion titulo="Pesaje" Icon={Scale}>
           <Field label="Peso del animal (kg)" nota={notaClinico}>
             <input type="number" min="0" value={form.peso} onChange={e => set('peso', e.target.value)}
               placeholder="Ej: 420" className={inputCls} style={inputSty} />
@@ -379,7 +397,7 @@ export default function EditarAnimal() {
         </Seccion>
 
         {/* ── Tacto ── */}
-        <Seccion titulo="Tacto" icono="🔍">
+        <Seccion titulo="Tacto" Icon={Hand}>
           <Field label="Situación" nota={notaClinico}>
             <select value={form.tacto_situacion} onChange={e => set('tacto_situacion', e.target.value)} className={inputCls} style={inputSty}>
               <option value=""></option>
@@ -397,7 +415,7 @@ export default function EditarAnimal() {
         </Seccion>
 
         {/* ── Vacunación ── */}
-        <Seccion titulo="Vacunación — Última dosis" icono="💉">
+        <Seccion titulo="Vacunación — Última dosis" Icon={Syringe}>
           {[
             ['vac_aftosa',      'Aftosa'],
             ['vac_brucelosis',  'Brucelosis'],

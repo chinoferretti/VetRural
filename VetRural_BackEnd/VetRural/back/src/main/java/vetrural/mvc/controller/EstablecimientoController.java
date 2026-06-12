@@ -62,6 +62,13 @@ public class EstablecimientoController {
                 .toList();
     }
 
+    @GetMapping("/{id}/bovinos/bajas")
+    public List<BovinoResponse> getBajas(@PathVariable Long id) {
+        return bovinoService.listarBajasPorEstablecimiento(id).stream()
+                .map(BovinoMapper::toResponse)
+                .toList();
+    }
+
     @GetMapping("/{id}/metricas")
     public MetricasResponse getMetricas(
             @PathVariable Long id,

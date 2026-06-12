@@ -3,6 +3,7 @@ package vetrural.mvc.dto.request;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 import vetrural.mvc.enumerations.VacunaTipoEnum;
+import java.time.LocalDate;
 
 @Data
 public class RegistrarVacunacionRequest {
@@ -14,4 +15,6 @@ public class RegistrarVacunacionRequest {
 
     @NotNull
     private VacunaTipoEnum vacuna;
+
+    private LocalDate fechaAplicacion;
 }

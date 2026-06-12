@@ -17,7 +17,7 @@ import SesionRegistro from './pages/SesionRegistro';
 import SesionResumen  from './pages/SesionResumen';
 import Historial      from './pages/Historial';
 import Metricas       from './pages/Metricas';
-import Partes         from './pages/Partes';
+import AnimalesBajas  from './pages/AnimalesBajas';
 import Miembros       from './pages/Miembros';
 import Invitaciones   from './pages/Invitaciones';
 
@@ -37,6 +37,7 @@ export default function App() {
               <Route element={<Layout />}>
                 <Route path="/dashboard"             element={<Dashboard />} />
                 <Route path="/animales"              element={<Animales />} />
+                <Route path="/animales/bajas"        element={<AnimalesBajas />} />
                 <Route path="/animales/nuevo"        element={<NuevoAnimal />} />
                 <Route path="/animales/:id"          element={<DetalleAnimal />} />
                 <Route path="/animales/:id/editar"   element={<EditarAnimal />} />
@@ -46,7 +47,6 @@ export default function App() {
                 <Route path="/sesion/resumen"        element={<SesionResumen />} />
                 <Route path="/historial"             element={<Historial />} />
                 <Route path="/metricas"              element={<Metricas />} />
-                <Route path="/partes"                element={<Partes />} />
               </Route>
             </Route>
 

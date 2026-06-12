@@ -4,7 +4,7 @@ import { useEstablecimiento } from '../context/EstablecimientoContext';
 import { useAuth } from '../context/AuthContext';
 import { getVeterinarios } from '../api/usuariosApi';
 import { sincronizarUsuario } from '../utils/usuarioSync';
-import { Smile, Scale, Hand, Syringe } from 'lucide-react';
+import { Smile, Scale, Hand, Syringe, MapPin } from 'lucide-react';
 
 const TRABAJOS = [
   { id: 'boqueo',     label: 'Boqueo',     Icono: Smile },
@@ -210,8 +210,9 @@ export default function ComenzarSesion() {
         <div>
           <h1 className="text-2xl font-bold" style={{ color: 'var(--verde-oscuro)' }}>Preparar sesión</h1>
           {seleccionado && (
-            <p className="text-sm font-medium" style={{ color: 'var(--verde-medio)' }}>
-              📍 {seleccionado.nombre} — {seleccionado.ubicacion}
+            <p className="flex items-center gap-1.5 text-sm font-medium" style={{ color: 'var(--verde-medio)' }}>
+              <MapPin className="w-3.5 h-3.5 flex-shrink-0" />
+              {seleccionado.nombre} — {seleccionado.ubicacion}
             </p>
           )}
         </div>
@@ -220,16 +221,17 @@ export default function ComenzarSesion() {
       {/* Trabajos */}
       <div className="card flex flex-col" style={{ padding: '1.5rem', gap: '1rem', flexShrink: 0 }}>
         <h2 className="font-bold" style={{ color: 'var(--verde-oscuro)' }}>Trabajos a realizar</h2>
-        <div className="grid grid-cols-2 gap-3" style={{ aspectRatio: '2 / 1' }}>
+        <div className="grid grid-cols-2 gap-3">
           {TRABAJOS.map(({ id, label, Icono }) => {
             const activo = trabajos.includes(id);
             return (
               <button key={id} type="button" onClick={() => toggleTrabajo(id)}
-                className="flex flex-col items-center justify-center rounded-2xl transition-all active:scale-[0.97] w-full h-full"
+                className="flex flex-col items-center justify-center rounded-2xl transition-all active:scale-[0.97] w-full"
                 style={{
                   border: activo ? '3px solid var(--verde-medio)' : '2px solid #E5E7EB',
                   backgroundColor: activo ? '#F0FDF4' : 'white',
-                  gap: '8%', padding: '8%',
+                  gap: '0.6rem', padding: '1rem 0.75rem',
+                  minHeight: '6rem',
                 }}>
                 <div className="flex items-center justify-center rounded-xl"
                   style={{

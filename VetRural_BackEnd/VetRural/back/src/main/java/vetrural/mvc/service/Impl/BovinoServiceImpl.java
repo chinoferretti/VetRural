@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import vetrural.mvc.dto.response.*;
 import vetrural.mvc.entity.*;
+import vetrural.mvc.enumerations.EstadoBovinoEnum;
 import vetrural.mvc.enumerations.RazaBovinoEnum;
 import vetrural.mvc.enumerations.SexoEnum;
 import vetrural.mvc.enumerations.TipoBovinoEnum;
@@ -82,11 +83,19 @@ public class BovinoServiceImpl implements BovinoService {
     public void eliminarBovino(Long id) {
         Bovino bovino = bovinoRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Bovino no encontrado: " + id));
-        // Borrar todos los eventos sanitarios antes de eliminar el bovino
         eventoSanitarioRepository.deleteAll(
             eventoSanitarioRepository.findByBovinoOrderByFechaHoraDesc(bovino)
         );
         bovinoRepository.delete(bovino);
+    }
+
+    @Override
+    public Bovino darBaja(Long id, EstadoBovinoEnum estado, String motivoBaja) {
+        Bovino bovino = obtenerOFallar(id);
+        bovino.setEstado(estado);
+        bovino.setFechaBaja(LocalDate.now());
+        bovino.setMotivoBaja(motivoBaja);
+        return bovinoRepository.save(bovino);
     }
 
     @Override
@@ -129,7 +138,13 @@ public class BovinoServiceImpl implements BovinoService {
     @Override
     public List<Bovino> listarBovinosPorEstablecimiento(Long establecimientoId) {
         Establecimiento e = establecimientoService.obtenerOFallar(establecimientoId);
-        return bovinoRepository.findByEstablecimiento(e);
+        return bovinoRepository.findActivosByEstablecimiento(e);
+    }
+
+    @Override
+    public List<Bovino> listarBajasPorEstablecimiento(Long establecimientoId) {
+        Establecimiento e = establecimientoService.obtenerOFallar(establecimientoId);
+        return bovinoRepository.findInactivosByEstablecimiento(e);
     }
 
     @Override

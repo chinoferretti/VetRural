@@ -9,6 +9,7 @@ import vetrural.mvc.enumerations.VacunaTipoEnum;
 import vetrural.mvc.repository.VacunacionRepository;
 import vetrural.mvc.service.VacunacionService;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -20,10 +21,15 @@ public class VacunacionServiceImpl implements VacunacionService {
 
     @Override
     public Vacunacion registrarVacunacion(Bovino bovino, Usuario registradoPor, VacunaTipoEnum vacuna) {
+        return registrarVacunacion(bovino, registradoPor, vacuna, null);
+    }
+
+    @Override
+    public Vacunacion registrarVacunacion(Bovino bovino, Usuario registradoPor, VacunaTipoEnum vacuna, LocalDate fechaAplicacion) {
         Vacunacion v = new Vacunacion();
         v.setBovino(bovino);
         v.setRegistradoPor(registradoPor);
-        v.setFechaHora(LocalDateTime.now());
+        v.setFechaHora(fechaAplicacion != null ? fechaAplicacion.atStartOfDay() : LocalDateTime.now());
         v.setVacuna(vacuna);
         return vacunacionRepository.save(v);
     }

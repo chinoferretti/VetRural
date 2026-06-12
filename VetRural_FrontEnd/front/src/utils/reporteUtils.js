@@ -61,7 +61,7 @@ const DIST_LABELS = { cabeza: '< 3 meses', cuerpo: '3–6 meses', cola: '> 6 mes
 export function generarHTMLReporte({
   fecha, establecimiento, veterinario, anotador,
   totalAnimales, trabajosDisplay, metricas,
-  animalesAtendidos, tratamientos,
+  animalesAtendidos,
 }) {
   const m = metricas || {};
 
@@ -218,27 +218,7 @@ export function generarHTMLReporte({
     </section>`;
   }
 
-  // ── Sección Tratamientos (historial) ────────────────────────────────────────
-  let secTratamientos = '';
-  if (tratamientos && tratamientos.length > 0) {
-    secTratamientos = `<section>
-      <h2 style="${h2Style}">Tratamientos</h2>
-      <div style="background:#f8f8f8;border-radius:8px;overflow:hidden">
-        ${tratamientos.map(tr => `<div style="padding:10px;border-bottom:1px solid #e5e7eb">
-          <div style="display:flex;justify-content:space-between;font-size:13px">
-            <span style="font-weight:600">${tr.animal}</span>
-            <span style="color:#6B7280;font-size:12px">${tr.viaAdmin}</span>
-          </div>
-          <div style="font-size:13px;margin-top:2px">
-            <span style="color:#2d7a4f;font-weight:bold">${tr.medicamento}</span>
-            <span style="color:#6B7280;margin-left:8px">${tr.dosis}</span>
-          </div>
-        </div>`).join('')}
-      </div>
-    </section>`;
-  }
-
-  const secciones = [secPesaje, secTacto, secBoqueo, secVacunacion, secOutliers, secAnimales, secTratamientos].filter(Boolean);
+  const secciones = [secPesaje, secTacto, secBoqueo, secVacunacion, secOutliers, secAnimales].filter(Boolean);
 
   return `<!DOCTYPE html><html><head><meta charset="utf-8">
   <title>Reporte VetRural — ${fecha}</title>

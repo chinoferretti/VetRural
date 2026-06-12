@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { WifiOff, RefreshCw } from 'lucide-react';
 import Navbar from './Navbar';
 import EstablecimientoModal from './EstablecimientoModal';
 import { useEstablecimiento } from '../context/EstablecimientoContext';
@@ -13,7 +14,7 @@ function BannerOffline({ online, pendientes }) {
     return (
       <div className="flex items-center justify-center gap-2 py-2 px-4 text-sm font-semibold"
         style={{ backgroundColor: '#FEF3C7', color: '#92400E', borderBottom: '1px solid #FDE68A' }}>
-        <span>📵</span>
+        <WifiOff className="w-4 h-4 flex-shrink-0" />
         Modo sin conexión — los cambios se sincronizarán automáticamente al reconectarse
       </div>
     );
@@ -23,7 +24,7 @@ function BannerOffline({ online, pendientes }) {
   return (
     <div className="flex items-center justify-center gap-2 py-2 px-4 text-sm font-semibold"
       style={{ backgroundColor: '#DBEAFE', color: '#1E40AF', borderBottom: '1px solid #BFDBFE' }}>
-      <span>🔄</span>
+      <RefreshCw className="w-4 h-4 flex-shrink-0 animate-spin" />
       Sincronizando {pendientes} cambio{pendientes !== 1 ? 's' : ''} pendiente{pendientes !== 1 ? 's' : ''}…
     </div>
   );
