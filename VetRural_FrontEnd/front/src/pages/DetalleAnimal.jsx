@@ -265,14 +265,16 @@ export default function DetalleAnimal() {
 
       {/* Toolbar */}
       <div className="flex items-center justify-end gap-2">
-        <button
-          onClick={() => navigate(`/animales/${id}/editar`)}
-          className="flex items-center gap-1.5 btn-secondary"
-          style={{ fontSize: '0.8rem', padding: '0.5rem 0.875rem' }}
-        >
-          <Pencil className="w-3.5 h-3.5" />
-          Editar
-        </button>
+        {!estaDadoDeBaja && (
+          <button
+            onClick={() => navigate(`/animales/${id}/editar`)}
+            className="flex items-center gap-1.5 btn-secondary"
+            style={{ fontSize: '0.8rem', padding: '0.5rem 0.875rem' }}
+          >
+            <Pencil className="w-3.5 h-3.5" />
+            Editar
+          </button>
+        )}
         <button
           onClick={() => cargarDatos(true)}
           disabled={actualizando}

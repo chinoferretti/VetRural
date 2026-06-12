@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useEstablecimiento } from '../context/EstablecimientoContext';
 import LoadingSpinner from '../components/LoadingSpinner';
-import { getAnimalesDadosDeBaja, darDeAltaAnimal } from '../api/animalesApi';
+import { getAnimalesDadosDeBaja, darDeAltaAnimal, eliminarAnimal } from '../api/animalesApi';
 import vacaImg from '../assets/vaca.png';
 import toroImg from '../assets/toro.png';
 
@@ -22,10 +22,11 @@ function formatFecha(valor) {
   return d.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
 
-function BajaCard({ animal, onDarAlta }) {
+function BajaCard({ animal, onDarAlta, onDepurar }) {
   const navigate = useNavigate();
-  const [confirmando, setConfirmando] = useState(false);
-  const [guardando,   setGuardando]   = useState(false);
+  const [confirmando,        setConfirmando]        = useState(false);
+  const [confirmandoDepurar, setConfirmandoDepurar] = useState(false);
+  const [guardando,          setGuardando]          = useState(false);
 
   const st = ESTADO_STYLE[animal.estado] ?? { bg: '#F3F4F6', color: '#6B7280', label: animal.estado };
   const esMacho = animal.sexo === 'Macho';
@@ -38,6 +39,17 @@ function BajaCard({ animal, onDarAlta }) {
     } catch {
       setGuardando(false);
       setConfirmando(false);
+    }
+  };
+
+  const handleConfirmarDepurar = async (e) => {
+    e.stopPropagation();
+    setGuardando(true);
+    try {
+      await onDepurar(animal.id);
+    } catch {
+      setGuardando(false);
+      setConfirmandoDepurar(false);
     }
   };
 
@@ -104,20 +116,30 @@ function BajaCard({ animal, onDarAlta }) {
           </div>
         </button>
 
-        {/* Botón dar de alta */}
-        {!confirmando && (
-          <button
-            onClick={e => { e.stopPropagation(); setConfirmando(true); }}
-            className="flex-shrink-0 rounded-xl font-semibold text-xs transition-colors hover:opacity-80"
-            style={{ backgroundColor: '#EBF7F1', color: 'var(--verde-oscuro)', padding: '0.4rem 0.75rem', border: '1px solid #C8E6D8' }}
-            title="Dar de alta"
-          >
-            Dar de alta
-          </button>
+        {/* Botones: dar de alta + depurar */}
+        {!confirmando && !confirmandoDepurar && (
+          <div className="flex flex-col gap-1.5 flex-shrink-0">
+            <button
+              onClick={e => { e.stopPropagation(); setConfirmando(true); }}
+              className="rounded-xl font-semibold text-xs transition-colors hover:opacity-80"
+              style={{ backgroundColor: '#EBF7F1', color: 'var(--verde-oscuro)', padding: '0.4rem 0.75rem', border: '1px solid #C8E6D8' }}
+              title="Dar de alta"
+            >
+              Dar de alta
+            </button>
+            <button
+              onClick={e => { e.stopPropagation(); setConfirmandoDepurar(true); }}
+              className="rounded-xl font-semibold text-xs transition-colors hover:opacity-80"
+              style={{ backgroundColor: '#FEE2E2', color: '#991B1B', padding: '0.4rem 0.75rem', border: '1px solid #FECACA' }}
+              title="Eliminar definitivamente"
+            >
+              Depurar
+            </button>
+          </div>
         )}
       </div>
 
-      {/* Panel confirmación */}
+      {/* Panel confirmación dar de alta */}
       {confirmando && (
         <div className="flex items-center gap-2 px-1"
           onClick={e => e.stopPropagation()}>
@@ -142,6 +164,33 @@ function BajaCard({ animal, onDarAlta }) {
           </button>
         </div>
       )}
+
+      {/* Panel confirmación depurar */}
+      {confirmandoDepurar && (
+        <div className="flex flex-col gap-1.5 px-1" onClick={e => e.stopPropagation()}>
+          <p className="text-xs font-semibold" style={{ color: '#991B1B' }}>
+            ¿Eliminar N° {animal.caravana} definitivamente? Se borrarán todos sus registros clínicos y no podrá recuperarse.
+          </p>
+          <div className="flex gap-2">
+            <button
+              onClick={handleConfirmarDepurar}
+              disabled={guardando}
+              className="rounded-lg font-semibold text-xs disabled:opacity-60"
+              style={{ backgroundColor: '#991B1B', color: 'white', padding: '0.35rem 0.75rem' }}
+            >
+              {guardando ? 'Eliminando...' : 'Eliminar definitivamente'}
+            </button>
+            <button
+              onClick={e => { e.stopPropagation(); setConfirmandoDepurar(false); }}
+              disabled={guardando}
+              className="rounded-lg font-semibold text-xs disabled:opacity-50"
+              style={{ backgroundColor: '#F3F4F6', color: '#6B7280', padding: '0.35rem 0.75rem' }}
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -164,6 +213,11 @@ export default function AnimalesBajas() {
 
   const handleDarAlta = async (id) => {
     await darDeAltaAnimal(id);
+    setBajas(prev => prev.filter(a => a.id !== id));
+  };
+
+  const handleDepurar = async (id) => {
+    await eliminarAnimal(id);
     setBajas(prev => prev.filter(a => a.id !== id));
   };
 
@@ -250,7 +304,7 @@ export default function AnimalesBajas() {
           ) : (
             <div className="flex flex-col gap-2">
               {filtradas.map(a => (
-                <BajaCard key={a.id} animal={a} onDarAlta={handleDarAlta} />
+                <BajaCard key={a.id} animal={a} onDarAlta={handleDarAlta} onDepurar={handleDepurar} />
               ))}
             </div>
           )}

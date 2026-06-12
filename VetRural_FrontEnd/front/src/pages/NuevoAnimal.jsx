@@ -152,6 +152,7 @@ export default function NuevoAnimal() {
   const [nuevoLote, setNuevoLote] = useState('');
   const [agregandoLote, setAgregandoLote] = useState(false);
   const [caravanaExiste, setCaravanaExiste] = useState(false);
+  const [caravanaEnBaja, setCaravanaEnBaja] = useState(false);
 
   // Advertencias no bloqueantes (tipo/edad, boqueo incompleto)
   const advertencias = useMemo(() => {
@@ -181,11 +182,21 @@ export default function NuevoAnimal() {
 
   // Validar caravana duplicada con debounce
   useEffect(() => {
-    if (!form.caravana || form.caravana.length < 3) { setCaravanaExiste(false); return; }
+    if (!form.caravana || form.caravana.length < 3) {
+      setCaravanaExiste(false);
+      setCaravanaEnBaja(false);
+      return;
+    }
     const timer = setTimeout(() => {
       existeCaravana(form.caravana)
-        .then(existe => setCaravanaExiste(existe))
-        .catch(() => setCaravanaExiste(false));
+        .then(existe => {
+          setCaravanaExiste(existe);
+          if (!existe) { setCaravanaEnBaja(false); return; }
+          api.get('/bovinos/buscar', { params: { caravana: form.caravana } })
+            .then(({ data }) => setCaravanaEnBaja(data.estado && data.estado !== 'Activo'))
+            .catch(() => setCaravanaEnBaja(true)); // 404 → el buscar solo devuelve activos → es baja
+        })
+        .catch(() => { setCaravanaExiste(false); setCaravanaEnBaja(false); });
     }, 500);
     return () => clearTimeout(timer);
   }, [form.caravana]);
@@ -211,7 +222,9 @@ export default function NuevoAnimal() {
     if (!form.caravana.trim()) {
       e.caravana = 'La caravana es obligatoria';
     } else if (caravanaExiste) {
-      e.caravana = 'Esta caravana ya está registrada en el sistema';
+      e.caravana = caravanaEnBaja
+        ? 'Esta caravana pertenece a un animal dado de baja. Depuralo del listado de bajas para poder reutilizarla.'
+        : 'Esta caravana ya está registrada en el sistema';
     }
 
     // Sexo

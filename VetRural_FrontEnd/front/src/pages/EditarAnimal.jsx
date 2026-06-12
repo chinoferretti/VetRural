@@ -120,6 +120,10 @@ export default function EditarAnimal() {
       api.get(`/manga/${id}/vacunaciones`).catch(() => ({ data: [] })),
     ])
       .then(([animal, pesajeRes, tactoRes, boqueoRes, vacunasRes]) => {
+        if (animal.estado && animal.estado !== 'Activo') {
+          navigate(`/animales/${id}`, { replace: true });
+          return;
+        }
         const pesaje  = pesajeRes.data  || {};
         const tacto   = tactoRes.data   || {};
         const boqueo  = boqueoRes.data  || {};

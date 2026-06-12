@@ -106,6 +106,10 @@ export default function SesionAnimal() {
     setBuscando(true);
     try {
       const { data } = await api.get('/bovinos/buscar', { params: { caravana: q } });
+      if (data.estado && data.estado !== 'Activo') {
+        setError(`N° ${data.caravana} está dado de baja (${data.estado}) y no puede trabajarse en una sesión.`);
+        return;
+      }
       continuar(data);
     } catch (err) {
       if (err.response?.status === 404) {
@@ -145,7 +149,7 @@ export default function SesionAnimal() {
           setModalNuevo(false);
           continuar(data);
         } catch {
-          setError('No se pudo registrar ni encontrar el animal.');
+          setError('Esta caravana pertenece a un animal dado de baja y no puede usarse en una sesión.');
         }
       } else {
         setError('Error al registrar el animal. Intentá de nuevo.');
