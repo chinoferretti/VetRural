@@ -2,10 +2,10 @@ import { useState } from 'react';
 import { useEstablecimiento } from '../context/EstablecimientoContext';
 import { useAuth } from '../context/AuthContext';
 import { getInvitaciones, removerInvitacion } from '../api/invitacionesApi';
-import { MapPin, Trash2 } from 'lucide-react';
+import { MapPin, Trash2, X } from 'lucide-react';
 
 export default function EstablecimientoModal({ onClose, requerido = false }) {
-  const { lista, seleccionado, seleccionar, crear, eliminar, unirse } = useEstablecimiento();
+  const { lista, seleccionado, seleccionar, crear, eliminar, unirse, salir, cargando } = useEstablecimiento();
   const { usuario, logout } = useAuth();
   const esProductor = usuario?.rol === 'productor';
 
@@ -13,6 +13,7 @@ export default function EstablecimientoModal({ onClose, requerido = false }) {
   const [form, setForm] = useState({ nombre: '', ubicacion: '' });
   const [error, setError] = useState('');
   const [confirmEliminar, setConfirmEliminar] = useState(null);
+  const [confirmSalir, setConfirmSalir] = useState(null);
 
   // Invitaciones para vet/otros
   const [invitaciones, setInvitaciones] = useState(() =>
@@ -34,6 +35,8 @@ export default function EstablecimientoModal({ onClose, requerido = false }) {
 
   const handleEliminar = (id) => { eliminar(id); setConfirmEliminar(null); };
 
+  const handleSalir = (id) => { salir(id); setConfirmSalir(null); onClose(); };
+
   const handleAceptar = (inv) => {
     removerInvitacion(usuario.id, inv.id);
     unirse(inv.establecimiento);
@@ -47,7 +50,7 @@ export default function EstablecimientoModal({ onClose, requerido = false }) {
   };
 
   // Vista para vet/otros sin establecimientos (pantalla bloqueante)
-  if (requerido && lista.length === 0 && !esProductor) {
+  if (requerido && !cargando && lista.length === 0 && !esProductor) {
     return (
       <div
         className="fixed inset-0 z-50 flex items-center justify-center p-4"
@@ -181,17 +184,17 @@ export default function EstablecimientoModal({ onClose, requerido = false }) {
                         <p className="text-sm" style={{ color: '#6B7280' }}>{est.ubicacion}</p>
                       </div>
                       <div className="flex items-center gap-2 flex-shrink-0">
-                        {confirmEliminar === est.id ? (
+                        {(confirmEliminar === est.id || confirmSalir === est.id) ? (
                           <>
                             <button
-                              onClick={() => handleEliminar(est.id)}
+                              onClick={() => confirmSalir === est.id ? handleSalir(est.id) : handleEliminar(est.id)}
                               className="text-sm px-5 py-3 rounded-xl font-semibold"
                               style={{ backgroundColor: '#FEE2E2', color: '#EF4444' }}
                             >
                               Confirmar
                             </button>
                             <button
-                              onClick={() => setConfirmEliminar(null)}
+                              onClick={() => { setConfirmEliminar(null); setConfirmSalir(null); }}
                               className="text-sm px-5 py-3 rounded-xl font-semibold"
                               style={{ backgroundColor: '#F3F4F6', color: '#6B7280' }}
                             >
@@ -210,7 +213,16 @@ export default function EstablecimientoModal({ onClose, requerido = false }) {
                             >
                               {activo ? '✓ Activo' : 'Seleccionar'}
                             </button>
-                            {esProductor && (
+                            {est.esInvitado ? (
+                              <button
+                                onClick={() => setConfirmSalir(est.id)}
+                                className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors hover:bg-red-50"
+                                style={{ color: '#D1D5DB' }}
+                                title="Salir del establecimiento"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            ) : esProductor && (
                               <button
                                 onClick={() => setConfirmEliminar(est.id)}
                                 className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors hover:bg-red-50"

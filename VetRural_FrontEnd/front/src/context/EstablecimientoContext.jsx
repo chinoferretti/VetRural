@@ -5,6 +5,7 @@ import {
   crearEstablecimiento,
   asociarUsuario,
 } from '../api/establecimientosApi';
+import { agregarMiembro, removerMiembroLocal } from '../api/invitacionesApi';
 
 function storageKey(userId) { return `vetrural_establecimientos_${userId}`; }
 
@@ -33,15 +34,22 @@ export function EstablecimientoProvider({ children }) {
     getEstablecimientosDelUsuario(usuario.id)
       .then(data => {
         const locales = cargarLocal(usuario.id);
-        const lista = data.map(e => ({
-          ...e,
-          ubicacion: locales.find(l => l.id === e.id)?.ubicacion || '',
-        }));
+        const backendIds = new Set(data.map(e => String(e.id)));
+        const fromBackend = data.map(e => {
+          const local = locales.find(l => String(l.id) === String(e.id));
+          return {
+            ...e,
+            ubicacion:  local?.ubicacion  ?? '',
+            esInvitado: local?.esInvitado ?? false,
+          };
+        });
+        // Preservar establecimientos aceptados localmente que el backend no conoce
+        const soloLocales = locales.filter(l => !backendIds.has(String(l.id)) && l.esInvitado);
+        const lista = [...fromBackend, ...soloLocales];
         setLista(lista);
         persistirLocal(usuario.id, lista);
       })
       .catch(() => {
-        // Sin conexión: usar caché local
         setLista(cargarLocal(usuario.id));
       })
       .finally(() => setCargando(false));
@@ -52,7 +60,7 @@ export function EstablecimientoProvider({ children }) {
   const crear = async ({ nombre, ubicacion }) => {
     const nuevo = await crearEstablecimiento(nombre);
     await asociarUsuario(nuevo.id, usuario.id);
-    const conUbicacion = { ...nuevo, ubicacion: ubicacion || '' };
+    const conUbicacion = { ...nuevo, ubicacion: ubicacion || '', esInvitado: false };
     const nueva = [...lista, conUbicacion];
     setLista(nueva);
     persistirLocal(usuario.id, nueva);
@@ -61,10 +69,17 @@ export function EstablecimientoProvider({ children }) {
 
   const unirse = (establecimiento) => {
     if (lista.find(e => e.id === establecimiento.id)) return;
-    const nueva = [...lista, establecimiento];
+    const conFlag = { ...establecimiento, esInvitado: true };
+    const nueva = [...lista, conFlag];
     setLista(nueva);
     persistirLocal(usuario.id, nueva);
-    setSeleccionado(establecimiento);
+    setSeleccionado(conFlag);
+    agregarMiembro(establecimiento.id, {
+      id:     usuario.id,
+      nombre: usuario.nombre,
+      email:  usuario.email,
+      rol:    usuario.rol,
+    });
   };
 
   const eliminar = (id) => {
@@ -72,6 +87,14 @@ export function EstablecimientoProvider({ children }) {
     setLista(nueva);
     persistirLocal(usuario.id, nueva);
     if (seleccionado?.id === id) setSeleccionado(null);
+  };
+
+  const salir = (estId) => {
+    removerMiembroLocal(estId, usuario.id);
+    const nueva = lista.filter(e => e.id !== estId);
+    setLista(nueva);
+    persistirLocal(usuario.id, nueva);
+    if (seleccionado?.id === estId) setSeleccionado(null);
   };
 
   const reemplazarEstablecimiento = (oldId, nuevoId) => {
@@ -82,7 +105,7 @@ export function EstablecimientoProvider({ children }) {
   };
 
   return (
-    <EstablecimientoContext.Provider value={{ lista, seleccionado, seleccionar, crear, unirse, eliminar, reemplazarEstablecimiento, cargando }}>
+    <EstablecimientoContext.Provider value={{ lista, seleccionado, seleccionar, crear, unirse, eliminar, salir, reemplazarEstablecimiento, cargando }}>
       {children}
     </EstablecimientoContext.Provider>
   );

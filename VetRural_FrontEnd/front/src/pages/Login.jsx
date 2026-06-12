@@ -29,8 +29,6 @@ export default function Login() {
     }
   };
 
-  const completarDemo = (email) => setForm({ email, password: '1234' });
-
   return (
     <div
       className="min-h-screen flex flex-col items-center justify-center px-4 py-8"
@@ -115,28 +113,6 @@ export default function Login() {
           </p>
         </div>
 
-        {/* Demo */}
-        <div className="mt-5 pt-4 border-t" style={{ borderColor: '#F3F4F6' }}>
-          <p className="text-xs font-medium mb-2" style={{ color: '#9CA3AF' }}>Acceso rápido (demo):</p>
-          <div className="flex flex-wrap gap-2">
-            {[
-              { label: 'Veterinario', email: 'vet@vetrural.com'      },
-              { label: 'Productor',   email: 'productor@campo.com'   },
-              { label: 'Otros',       email: 'peon@campo.com'        },
-            ].map(({ label, email }) => (
-              <button
-                key={email}
-                type="button"
-                onClick={() => completarDemo(email)}
-                className="text-xs px-3 py-1.5 rounded-lg border transition-colors hover:bg-gray-50"
-                style={{ borderColor: '#D1D5DB', color: '#374151' }}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-          <p className="text-xs mt-2" style={{ color: '#9CA3AF' }}>Contraseña: <strong>1234</strong></p>
-        </div>
       </div>
     </div>
   );

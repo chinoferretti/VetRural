@@ -132,17 +132,11 @@ export default function Navbar() {
                       padding: '1rem',
                     }}
                   >
-                    <div className="mb-3 pb-3" style={{ borderBottom: '1px solid #F3F4F6' }}>
-                      <p className="font-bold" style={{ color: 'var(--verde-oscuro)' }}>{usuario.nombre}</p>
-                      <p className="text-sm capitalize mt-0.5" style={{ color: '#6B7280' }}>{usuario.rol}</p>
-                      {usuario.plan && (
-                        <p className="text-xs mt-0.5" style={{ color: '#9CA3AF' }}>Plan {usuario.plan}</p>
-                      )}
-                    </div>
+                    <p className="font-bold mb-3" style={{ color: 'var(--verde-oscuro)' }}>{usuario.nombre}</p>
                     <button
                       onClick={handleLogout}
-                      className="w-full py-3 rounded-xl text-sm font-semibold transition-colors hover:bg-red-600 hover:text-white"
-                      style={{ backgroundColor: '#FEE2E2', color: '#EF4444' }}
+                      className="w-full py-2.5 rounded-md text-sm font-semibold transition-opacity hover:opacity-85"
+                      style={{ backgroundColor: 'var(--verde-oscuro)', color: 'white' }}
                     >
                       Cerrar sesión
                     </button>

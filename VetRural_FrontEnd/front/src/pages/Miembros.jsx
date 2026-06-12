@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useEstablecimiento } from '../context/EstablecimientoContext';
-import { getMiembros, getInvitaciones, invitar, removerMiembro, cancelarInvitacion } from '../api/usuariosApi';
-import LoadingSpinner from '../components/LoadingSpinner';
+import { useAuth } from '../context/AuthContext';
+import { guardarInvitacion, getMiembrosLocales } from '../api/invitacionesApi';
 
 const ROL_CONFIG = {
   veterinario: { label: 'Veterinario', color: '#065F46', bg: '#D1FAE5' },
@@ -25,76 +25,68 @@ function Badge({ tipo, valor }) {
   );
 }
 
+function buscarUsuarioRegistrado(email) {
+  try {
+    const lista = JSON.parse(localStorage.getItem('vetrural_usuarios_registrados') || '[]');
+    return lista.find(u => u.email === email) ?? null;
+  } catch { return null; }
+}
+
 export default function Miembros() {
   const { seleccionado } = useEstablecimiento();
+  const { usuario } = useAuth();
 
-  const [miembros,    setMiembros]    = useState([]);
-  const [invitaciones,setInvitaciones]= useState([]);
-  const [cargando,    setCargando]    = useState(true);
-  const [email,       setEmail]       = useState('');
-  const [enviando,    setEnviando]    = useState(false);
-  const [feedback,    setFeedback]    = useState(null); // { tipo: 'ok'|'error', msg }
-
-  const estId = seleccionado?.id;
+  const [miembros,     setMiembros]     = useState([]);
+  const [invitaciones, setInvitaciones] = useState([]);
+  const [email,        setEmail]        = useState('');
+  const [feedback,     setFeedback]     = useState(null);
 
   useEffect(() => {
-    if (!estId) return;
-    Promise.all([getMiembros(estId), getInvitaciones(estId)])
-      .then(([m, i]) => { setMiembros(m); setInvitaciones(i); })
-      .finally(() => setCargando(false));
-  }, [estId]);
+    setMiembros(seleccionado?.id ? getMiembrosLocales(seleccionado.id) : []);
+  }, [seleccionado?.id]);
 
-  const handleInvitar = async (e) => {
+  const handleInvitar = (e) => {
     e.preventDefault();
     const emailTrimmed = email.trim().toLowerCase();
     if (!emailTrimmed || !emailTrimmed.includes('@')) {
       setFeedback({ tipo: 'error', msg: 'Ingresá un email válido.' });
       return;
     }
-    if (miembros.some(m => m.email === emailTrimmed)) {
-      setFeedback({ tipo: 'error', msg: 'Este usuario ya es miembro del establecimiento.' });
-      return;
-    }
-    if (invitaciones.some(i => i.email === emailTrimmed && i.estado === 'pendiente')) {
-      setFeedback({ tipo: 'error', msg: 'Ya existe una invitación pendiente para este email.' });
-      return;
+
+    const invitado = buscarUsuarioRegistrado(emailTrimmed);
+    if (invitado) {
+      const invitacion = {
+        id: `inv-${Date.now()}`,
+        establecimiento: {
+          id:       seleccionado?.id ?? `mock-${Date.now()}`,
+          nombre:   seleccionado?.nombre ?? 'Establecimiento',
+          ubicacion: seleccionado?.ubicacion ?? '',
+        },
+        remitente: usuario?.nombre ?? 'Productor',
+        fecha: new Date().toISOString().slice(0, 10),
+      };
+      guardarInvitacion(invitado.id, invitacion);
     }
 
-    setEnviando(true);
-    setFeedback(null);
-    try {
-      await invitar(estId, emailTrimmed);
-      const nuevaInv = { id: `inv-${Date.now()}`, email: emailTrimmed, fechaEnvio: new Date().toISOString().slice(0, 10), estado: 'pendiente' };
-      setInvitaciones(prev => [nuevaInv, ...prev]);
-      setEmail('');
-      setFeedback({ tipo: 'ok', msg: `Invitación enviada a ${emailTrimmed}` });
-    } catch (err) {
-      setFeedback({ tipo: 'error', msg: err.message || 'No se pudo enviar la invitación.' });
-    } finally {
-      setEnviando(false);
-    }
+    const nuevaInv = {
+      id: `inv-${Date.now()}`,
+      email: emailTrimmed,
+      fechaEnvio: new Date().toISOString().slice(0, 10),
+      estado: 'pendiente',
+    };
+    setInvitaciones(prev => [nuevaInv, ...prev]);
+    setEmail('');
+    setFeedback({ tipo: 'ok', msg: `Invitación enviada a ${emailTrimmed}` });
   };
 
-  const handleRemoverMiembro = async (m) => {
+  const handleRemoverMiembro = (m) => {
     if (!confirm(`¿Quitarle acceso a ${m.nombre}?`)) return;
-    try {
-      await removerMiembro(estId, m.id);
-      setMiembros(prev => prev.filter(x => x.id !== m.id));
-    } catch {
-      setFeedback({ tipo: 'error', msg: 'No se pudo remover al miembro.' });
-    }
+    setMiembros(prev => prev.filter(x => x.id !== m.id));
   };
 
-  const handleCancelarInvitacion = async (inv) => {
-    try {
-      await cancelarInvitacion(estId, inv.id);
-      setInvitaciones(prev => prev.filter(i => i.id !== inv.id));
-    } catch {
-      setFeedback({ tipo: 'error', msg: 'No se pudo cancelar la invitación.' });
-    }
+  const handleCancelarInvitacion = (inv) => {
+    setInvitaciones(prev => prev.filter(i => i.id !== inv.id));
   };
-
-  if (cargando) return <LoadingSpinner texto="Cargando miembros..." />;
 
   const invPendientes = invitaciones.filter(i => i.estado === 'pendiente');
 
@@ -109,7 +101,7 @@ export default function Miembros() {
         </p>
       </div>
 
-      {/* Invitar por email — estilo GitHub */}
+      {/* Invitar por email */}
       <div className="card" style={{ padding: '1.5rem' }}>
         <h2 className="font-bold mb-3" style={{ color: 'var(--verde-oscuro)', fontSize: '1.05rem' }}>
           Invitar usuario
@@ -126,10 +118,10 @@ export default function Miembros() {
             className="flex-1 rounded-xl border bg-white"
             style={{ borderColor: '#D1D5DB', padding: '0.875rem 1rem', fontSize: '1rem' }}
           />
-          <button type="submit" disabled={enviando}
-            className="btn-primary flex-shrink-0 disabled:opacity-50"
+          <button type="submit"
+            className="btn-primary flex-shrink-0"
             style={{ padding: '0.875rem 1.5rem', fontSize: '1rem' }}>
-            {enviando ? 'Enviando…' : 'Invitar'}
+            Invitar
           </button>
         </form>
 
@@ -175,39 +167,41 @@ export default function Miembros() {
         </div>
       )}
 
-      {/* Miembros actuales */}
-      <div>
-        <h2 className="font-bold mb-3" style={{ color: 'var(--verde-oscuro)', fontSize: '1.05rem' }}>
-          Miembros activos
-        </h2>
-        <div className="flex flex-col gap-2">
-          {miembros.map(m => (
-            <div key={m.id}
-              className="bg-white rounded-2xl flex items-center gap-4"
-              style={{ border: '1.5px solid #E5E7EB', padding: '1rem 1.25rem' }}>
-              <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold flex-shrink-0"
-                style={{ backgroundColor: 'var(--verde-medio)', color: 'white', fontSize: '0.95rem' }}>
-                {m.nombre.charAt(0)}
+      {/* Miembros activos */}
+      {miembros.length > 0 && (
+        <div>
+          <h2 className="font-bold mb-3" style={{ color: 'var(--verde-oscuro)', fontSize: '1.05rem' }}>
+            Miembros activos
+          </h2>
+          <div className="flex flex-col gap-2">
+            {miembros.map(m => (
+              <div key={m.id}
+                className="bg-white rounded-2xl flex items-center gap-4"
+                style={{ border: '1.5px solid #E5E7EB', padding: '1rem 1.25rem' }}>
+                <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold flex-shrink-0"
+                  style={{ backgroundColor: 'var(--verde-medio)', color: 'white', fontSize: '0.95rem' }}>
+                  {m.nombre.charAt(0)}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold truncate" style={{ color: '#111827' }}>{m.nombre}</p>
+                  <p className="text-xs mt-0.5 truncate" style={{ color: '#9CA3AF' }}>{m.email}</p>
+                </div>
+                <Badge tipo="rol" valor={m.rol} />
+                {m.rol !== 'productor' && (
+                  <button onClick={() => handleRemoverMiembro(m)}
+                    className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 hover:bg-red-50 transition-colors"
+                    style={{ border: '1.5px solid #E5E7EB', color: '#EF4444' }}
+                    title="Quitar miembro">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                )}
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="font-semibold truncate" style={{ color: '#111827' }}>{m.nombre}</p>
-                <p className="text-xs mt-0.5 truncate" style={{ color: '#9CA3AF' }}>{m.email}</p>
-              </div>
-              <Badge tipo="rol" valor={m.rol} />
-              {m.rol !== 'productor' && (
-                <button onClick={() => handleRemoverMiembro(m)}
-                  className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 hover:bg-red-50 transition-colors"
-                  style={{ border: '1.5px solid #E5E7EB', color: '#EF4444' }}
-                  title="Quitar miembro">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              )}
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
     </div>
   );
