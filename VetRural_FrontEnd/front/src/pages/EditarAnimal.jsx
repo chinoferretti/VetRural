@@ -35,6 +35,20 @@ const DIENTES_OPCIONES = [
 ];
 const DETERIOROS = ['Nulo', 'Leve', 'Moderado', 'Severo'];
 
+const fechaLocal = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+};
+
+const VACUNA_HINTS = {
+  vac_aftosa:      'Obligatoria · 2 campañas anuales (SENASA)',
+  vac_brucelosis:  'Obligatoria · Única dosis para terneras 3–8 meses',
+  vac_carbunco:    'Opcional · Renovar cada 12 meses',
+  vac_clostridial: 'Opcional · Renovar cada 12 meses',
+  vac_ibr:         'Opcional · Renovar cada 12 meses',
+  vac_bvd:         'Opcional · Renovar cada 12 meses',
+};
+
 const inputCls = "w-full rounded-xl border bg-white";
 const inputSty = { borderColor: '#D1D5DB', padding: '0.875rem 1.1rem', fontSize: '0.95rem' };
 
@@ -392,19 +406,22 @@ export default function EditarAnimal() {
             ['vac_ibr',         'IBR'],
             ['vac_bvd',         'BVD'],
           ].map(([campo, label]) => (
-            <Field key={campo} label={label} nota={notaClinico}>
+            <Field key={campo} label={label}>
               <div className="flex gap-2">
                 <input type="date" value={form[campo]} onChange={e => set(campo, e.target.value)}
                   className={inputCls} style={{ ...inputSty, flex: 1 }} />
                 <button
                   type="button"
-                  onClick={() => set(campo, new Date().toISOString().slice(0, 10))}
+                  onClick={() => set(campo, fechaLocal())}
                   className="flex-shrink-0 rounded-xl font-bold text-sm"
                   style={{ backgroundColor: 'var(--verde-medio)', color: 'white', padding: '0 0.875rem' }}
                 >
                   HOY
                 </button>
               </div>
+              {VACUNA_HINTS[campo] && (
+                <p className="text-xs mt-0.5" style={{ color: '#9CA3AF' }}>{VACUNA_HINTS[campo]}</p>
+              )}
             </Field>
           ))}
         </Seccion>

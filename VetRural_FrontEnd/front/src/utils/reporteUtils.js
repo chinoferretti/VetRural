@@ -1,5 +1,45 @@
 const DENTADURA_LABELS = { 'De_Leche': 'De leche', 'Mixta': 'Mixta', 'Permanente': 'Permanente' };
 
+// Estimación de edad a partir de dientes + dentadura + deterioro
+export function estimarEdadDesdeBoqueo(dientes, dentadura, deterioro) {
+  if (!dientes) return null;
+
+  if (dentadura === 'De_Leche')
+    return { label: '< 1.5 años (de leche)', meses: 12 };
+
+  if (dentadura === 'Mixta') {
+    const map = {
+      Dos:    { label: '1.5–2 años (2 d., mixta)',   meses: 21 },
+      Cuatro: { label: '2.5–3 años (4 d., mixta)',   meses: 33 },
+      Seis:   { label: '3.5–4 años (6 d., mixta)',   meses: 45 },
+      Ocho:   { label: '4–5 años (8 d., mixta)',     meses: 54 },
+    };
+    return map[dientes] ?? null;
+  }
+
+  if (dentadura === 'Permanente') {
+    if (dientes === 'Dos')    return { label: '~2 años (2 perm.)',  meses: 24 };
+    if (dientes === 'Cuatro') return { label: '~3 años (4 perm.)',  meses: 36 };
+    if (dientes === 'Seis')   return { label: '~4 años (6 perm.)',  meses: 48 };
+    const porDeterioro = {
+      Nulo:     { label: '5–6 años (boca llena)',        meses: 66 },
+      Leve:     { label: '6–7 años (desgaste leve)',     meses: 78 },
+      Moderado: { label: '7–9 años (desgaste mod.)',     meses: 96 },
+      Severo:   { label: '≥ 10 años (desgaste severo)',  meses: 120 },
+    };
+    return (deterioro && porDeterioro[deterioro]) ?? { label: '≥ 5 años (boca llena)', meses: 66 };
+  }
+
+  // dentadura no registrada: rango por dientes solo
+  const fallback = {
+    Dos:    { label: '1.5–2 años (2 dientes)',   meses: 21 },
+    Cuatro: { label: '2.5–3 años (4 dientes)',   meses: 33 },
+    Seis:   { label: '3.5–4 años (6 dientes)',   meses: 45 },
+    Ocho:   { label: '> 4.5 años (8 dientes)',   meses: 60 },
+  };
+  return fallback[dientes] ?? null;
+}
+
 // ── CSS bar helper ─────────────────────────────────────────────────────────────
 
 function barraCSS(pct, color = '#2d7a4f') {
@@ -330,6 +370,7 @@ export function calcularMetricasDesdeSesion(registros, trabajos) {
     const conteos = { 'De_Leche': 0, 'Mixta': 0, 'Permanente': 0 };
     const deterioro = { 'Leve': 0, 'Moderado': 0, 'Severo': 0 };
     const distribucionDientes = {};
+    const edadEstimadaDistribucion = {};
 
     registros.forEach(r => {
       if (r.form.boqueo_dentadura && conteos[r.form.boqueo_dentadura] !== undefined)
@@ -338,6 +379,8 @@ export function calcularMetricasDesdeSesion(registros, trabajos) {
         deterioro[r.form.boqueo_deterioro]++;
       if (r.form.boqueo_dientes)
         distribucionDientes[r.form.boqueo_dientes] = (distribucionDientes[r.form.boqueo_dientes] || 0) + 1;
+      const est = estimarEdadDesdeBoqueo(r.form.boqueo_dientes, r.form.boqueo_dentadura, r.form.boqueo_deterioro);
+      if (est) edadEstimadaDistribucion[est.label] = (edadEstimadaDistribucion[est.label] || 0) + 1;
     });
 
     const totalB = Object.values(conteos).reduce((a, b) => a + b, 0);
@@ -345,6 +388,7 @@ export function calcularMetricasDesdeSesion(registros, trabajos) {
       conteos,
       deterioro,
       distribucionDientes,
+      edadEstimadaDistribucion,
       tasaReposicion: totalB > 0 ? Math.round((conteos['Permanente'] / totalB) * 100) : 0,
     };
   }

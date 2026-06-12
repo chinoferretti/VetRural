@@ -6,7 +6,7 @@ import { useEstablecimiento } from '../context/EstablecimientoContext';
 import { useAuth } from '../context/AuthContext';
 import { getMetricasEstablecimiento } from '../api/establecimientosApi';
 import LoadingSpinner from '../components/LoadingSpinner';
-import { PawPrint, Scale, Clock, Heart, CircleSlash, Users, Stethoscope, CalendarDays, Activity } from 'lucide-react';
+import { PawPrint, Scale, Clock, Heart, CircleSlash, Users, Stethoscope, CalendarDays, Activity, AlertTriangle } from 'lucide-react';
 
 const SEXOS = ['Todos', 'Hembra', 'Macho'];
 
@@ -121,13 +121,13 @@ export default function Metricas() {
   // Lotes disponibles para el filtro (de la respuesta del backend)
   const lotesOpciones = ['Todos', ...(metricas?.lotes ?? [])];
 
-  // Datos de vacunación para el gráfico
+  // Vacunación: vigente (dentro del intervalo) + vencida (registrada pero fuera de plazo)
   const vacunacionChart = metricas
-    ? Object.entries(VACUNAS_LABELS).map(([key, label]) => ({
-        vacuna: label,
-        vacunados: metricas.vacunados?.[key] ?? 0,
-        total: metricas.totalBovinos,
-      }))
+    ? Object.entries(VACUNAS_LABELS).map(([key, label]) => {
+        const vigente = metricas.vacunadosVigentes?.[key] ?? 0;
+        const alguna  = metricas.vacunados?.[key] ?? 0;
+        return { vacuna: label, vigente, vencida: Math.max(0, alguna - vigente) };
+      })
     : [];
 
   return (
@@ -177,10 +177,10 @@ export default function Metricas() {
                 />
               ) : (
                 <StatCard
-                  titulo="Outliers detectados"
-                  valor={sesion.totalOutliers}
-                  subtexto="animales fuera de rango"
-                  Icon={Scale}
+                  titulo="Alertas"
+                  valor={metricas?.alertas?.length ?? sesion.totalOutliers}
+                  subtexto={metricas?.alertas ? `${metricas.alertas.length} problema${metricas.alertas.length !== 1 ? 's' : ''} en el rodeo` : "en sesiones registradas"}
+                  Icon={AlertTriangle}
                   colorIcon={{ bg: '#FEF3C7', border: '#FDE68A', icon: '#D97706' }}
                 />
               )}
@@ -403,9 +403,9 @@ export default function Metricas() {
                 {/* Vacunación */}
                 {vacunacionChart.length > 0 && (
                   <div className="card" style={{ padding: '1.75rem' }}>
-                    <h3 className="font-bold text-lg mb-2" style={{ color: 'var(--verde-oscuro)' }}>Cobertura de vacunación</h3>
+                    <h3 className="font-bold text-lg mb-1" style={{ color: 'var(--verde-oscuro)' }}>Cobertura de vacunación vigente</h3>
                     <p className="text-sm mb-5" style={{ color: '#9CA3AF' }}>
-                      Animales con al menos una dosis registrada · total: {metricas.totalBovinos}
+                      Vacunados dentro del intervalo recomendado · Aftosa: 6 meses · Resto: 12 meses
                     </p>
                     <ResponsiveContainer width="100%" height={240}>
                       <BarChart data={vacunacionChart} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
@@ -413,14 +413,48 @@ export default function Metricas() {
                         <XAxis dataKey="vacuna" tick={{ fontSize: 12 }} />
                         <YAxis allowDecimals={false} tick={{ fontSize: 12 }} domain={[0, metricas.totalBovinos]} />
                         <Tooltip
-                          formatter={(v) => [
+                          formatter={(v, name) => [
                             `${v} (${metricas.totalBovinos > 0 ? Math.round(v / metricas.totalBovinos * 100) : 0}%)`,
-                            'Vacunados'
+                            name === 'vigente' ? 'Vigente' : 'Vencida'
                           ]}
                           contentStyle={{ borderRadius: '0.75rem', border: '1px solid #E5E7EB' }} />
-                        <Bar dataKey="vacunados" fill="var(--verde-medio)" radius={[8, 8, 0, 0]} />
+                        <Bar dataKey="vigente" stackId="a" fill="var(--verde-medio)" radius={[0, 0, 0, 0]} />
+                        <Bar dataKey="vencida" stackId="a" fill="#FCA5A5" radius={[8, 8, 0, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
+                    <div className="flex items-center gap-4 mt-3 text-xs" style={{ color: '#6B7280' }}>
+                      <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded-sm" style={{ backgroundColor: 'var(--verde-medio)' }} />Vigente</span>
+                      <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded-sm" style={{ backgroundColor: '#FCA5A5' }} />Vencida (registrada)</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Alertas */}
+                {metricas.alertas && (
+                  <div className="card" style={{ padding: '1.75rem' }}>
+                    <div className="flex items-center gap-2 mb-4">
+                      <AlertTriangle className="w-5 h-5" style={{ color: '#D97706' }} />
+                      <h3 className="font-bold text-lg" style={{ color: 'var(--verde-oscuro)' }}>Alertas del rodeo</h3>
+                    </div>
+                    {metricas.alertas.length === 0 ? (
+                      <div className="flex items-center gap-2 py-3 px-4 rounded-xl" style={{ backgroundColor: '#F0FDF4', border: '1px solid #86EFAC' }}>
+                        <span style={{ fontSize: '1.1rem' }}>✅</span>
+                        <p className="text-sm font-semibold" style={{ color: 'var(--verde-oscuro)' }}>Sin alertas activas para este filtro</p>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col" style={{ gap: '0.5rem' }}>
+                        {metricas.alertas.map((alerta, i) => (
+                          <div key={i} className="flex items-center gap-3 px-4 py-2.5 rounded-xl"
+                            style={{ backgroundColor: '#FFFBEB', border: '1px solid #FDE68A' }}>
+                            <span className="text-sm flex-shrink-0">⚠️</span>
+                            <p className="text-sm" style={{ color: '#92400E' }}>
+                              <span className="font-bold">N° {alerta.caravana}:</span>{' '}
+                              <span>{alerta.motivo}</span>
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
               </>

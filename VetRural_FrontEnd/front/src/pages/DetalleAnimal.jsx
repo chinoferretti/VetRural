@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, RefreshCw } from 'lucide-react';
+import { RefreshCw } from 'lucide-react';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { getAnimalById } from '../api/animalesApi';
 import api from '../api/axios';
@@ -60,16 +60,36 @@ function formatEnum(valor) {
   return String(valor).replace(/_/g, ' ');
 }
 
-const DIENTES_EDAD = {
-  Dos:    '1.5–2 años (2 dientes)',
-  Cuatro: '2.5–3 años (4 dientes)',
-  Seis:   '3.5–4 años (6 dientes)',
-  Ocho:   '> 4.5 años (8 dientes)',
-};
-
 function edadDesdeBoqueo(boqueo) {
-  if (!boqueo?.dientes) return null;
-  return DIENTES_EDAD[boqueo.dientes] ?? null;
+  const { dientes, dentadura, deterioro } = boqueo ?? {};
+  if (!dientes) return null;
+
+  if (dentadura === 'De_Leche') return '< 1.5 años (dientes de leche)';
+
+  if (dentadura === 'Mixta') {
+    const map = { Dos: '1.5–2 años', Cuatro: '~2.5–3 años', Seis: '~3.5–4 años', Ocho: '~4–5 años' };
+    const rango = map[dientes];
+    return rango ? `${rango} (${dientes.toLowerCase()} dientes, dentadura mixta)` : null;
+  }
+
+  if (dentadura === 'Permanente') {
+    if (dientes === 'Dos')    return '~2 años (2 dientes permanentes)';
+    if (dientes === 'Cuatro') return '~3 años (4 dientes permanentes)';
+    if (dientes === 'Seis')   return '~4 años (6 dientes permanentes)';
+    // Ocho permanentes → afinar por deterioro
+    const porDeterioro = {
+      Nulo:     '5–6 años (boca llena, sin desgaste)',
+      Leve:     '6–7 años (boca llena, desgaste leve)',
+      Moderado: '7–9 años (desgaste moderado)',
+      Severo:   '≥ 10 años (desgaste severo)',
+    };
+    return (deterioro && porDeterioro[deterioro]) ?? '≥ 5 años (boca llena)';
+  }
+
+  // dentadura no registrada: rango general por dientes
+  const fallback = { Dos: '1.5–2 años', Cuatro: '2.5–3 años', Seis: '3.5–4 años', Ocho: '> 4.5 años' };
+  const rango = fallback[dientes];
+  return rango ? `${rango} (${dientes.toLowerCase()} dientes)` : null;
 }
 
 export default function DetalleAnimal() {
@@ -132,57 +152,20 @@ export default function DetalleAnimal() {
   return (
     <div className="flex flex-col w-full" style={{ gap: '1.5rem' }}>
 
-      {/* Header */}
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex items-start gap-3">
-          <button
-            onClick={() => navigate('/animales')}
-            className="flex items-center justify-center w-9 h-9 rounded-xl transition-colors hover:bg-white mt-1 flex-shrink-0"
-            style={{ border: '1.5px solid #E5E7EB', color: '#6B7280' }}
-          >
-            <ArrowLeft className="w-4 h-4" />
-          </button>
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-widest mb-0.5" style={{ color: '#9CA3AF', fontFamily: 'monospace' }}>
-              Caravana #{animal.caravana}
-            </p>
-            <h1 className="text-2xl font-bold" style={{ color: 'var(--verde-oscuro)' }}>
-              {animal.raza || '—'}
-            </h1>
-            <div className="flex flex-wrap gap-2 mt-1.5">
-              {animal.tipo && (
-                <span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={{ backgroundColor: '#EBF7F1', color: 'var(--verde-medio)' }}>
-                  {animal.tipo}
-                </span>
-              )}
-              {animal.sexo && (
-                <span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={{ backgroundColor: '#EEF2FF', color: '#4F46E5' }}>
-                  {animal.sexo}
-                </span>
-              )}
-              {animal.lote && (
-                <span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={{ backgroundColor: '#FEF3C7', color: '#92400E' }}>
-                  Lote {animal.lote}
-                </span>
-              )}
-            </div>
-          </div>
-        </div>
-
-        <div className="flex flex-col items-end gap-1 flex-shrink-0">
-          <button
-            onClick={() => cargarDatos(true)}
-            disabled={actualizando}
-            className="flex items-center gap-1.5 btn-secondary"
-            style={{ fontSize: '0.8rem', padding: '0.5rem 0.875rem' }}
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${actualizando ? 'animate-spin' : ''}`} />
-            {actualizando ? 'Actualizando…' : 'Actualizar'}
-          </button>
-          {horaActualizacion && (
-            <p className="text-xs" style={{ color: '#9CA3AF' }}>Datos al {horaActualizacion}</p>
-          )}
-        </div>
+      {/* Actualizar */}
+      <div className="flex items-center justify-end gap-2">
+        <button
+          onClick={() => cargarDatos(true)}
+          disabled={actualizando}
+          className="flex items-center gap-1.5 btn-secondary"
+          style={{ fontSize: '0.8rem', padding: '0.5rem 0.875rem' }}
+        >
+          <RefreshCw className={`w-3.5 h-3.5 ${actualizando ? 'animate-spin' : ''}`} />
+          {actualizando ? 'Actualizando…' : 'Actualizar'}
+        </button>
+        {horaActualizacion && (
+          <p className="text-xs" style={{ color: '#9CA3AF' }}>Datos al {horaActualizacion}</p>
+        )}
       </div>
 
       {/* Grilla principal */}

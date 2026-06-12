@@ -46,11 +46,23 @@ const PERIODOS_PRENEZ = [
 const inputCls = "w-full rounded-xl border bg-white";
 const inputSty = { borderColor: '#D1D5DB', padding: 'clamp(0.7rem, 2vw, 0.95rem) 1rem', fontSize: 'clamp(0.9rem, 2vw, 1rem)' };
 
-const HOY = new Date().toISOString().slice(0, 10);
+const fechaLocal = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+};
 
-function CampoVacuna({ label, value, onChange }) {
+const VACUNA_HINTS = {
+  vac_aftosa:      'Obligatoria · 2 campañas anuales (SENASA)',
+  vac_brucelosis:  'Obligatoria · Única dosis para terneras 3–8 meses',
+  vac_carbunco:    'Opcional · Renovar cada 12 meses',
+  vac_clostridial: 'Opcional · Renovar cada 12 meses',
+  vac_ibr:         'Opcional · Renovar cada 12 meses',
+  vac_bvd:         'Opcional · Renovar cada 12 meses',
+};
+
+function CampoVacuna({ label, value, onChange, hint }) {
   const [prevValue, setPrevValue] = useState(null);
-  const handleHoy = () => { setPrevValue(value); onChange(HOY); };
+  const handleHoy = () => { setPrevValue(value); onChange(fechaLocal()); };
   const handleDeshacer = () => { onChange(prevValue); setPrevValue(null); };
   const handleManual = (v) => { setPrevValue(null); onChange(v); };
   return (
@@ -73,6 +85,7 @@ function CampoVacuna({ label, value, onChange }) {
           </button>
         )}
       </div>
+      {hint && <p className="text-xs mt-0.5" style={{ color: '#9CA3AF' }}>{hint}</p>}
     </div>
   );
 }
@@ -334,6 +347,7 @@ export default function SesionRegistro() {
           <Campo label="Peso (kg)">
             <input type="number" min="0" value={form.peso}
               onChange={e => set('peso', e.target.value)}
+              onWheel={e => e.target.blur()}
               placeholder="Ej: 420" className={inputCls} style={inputSty} />
           </Campo>
         </Seccion>
@@ -378,7 +392,7 @@ export default function SesionRegistro() {
             ['vac_ibr',         'IBR'],
             ['vac_bvd',         'BVD'],
           ].map(([campo, label]) => (
-            <CampoVacuna key={campo} label={label} value={form[campo]} onChange={v => set(campo, v)} />
+            <CampoVacuna key={campo} label={label} value={form[campo]} onChange={v => set(campo, v)} hint={VACUNA_HINTS[campo]} />
           ))}
         </Seccion>
       )}

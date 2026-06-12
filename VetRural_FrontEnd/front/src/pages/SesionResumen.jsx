@@ -296,22 +296,42 @@ export default function SesionResumen() {
                   <Bar dataKey="v" fill="var(--verde-medio)" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
-              {m.boqueo.distribucionDientes && Object.keys(m.boqueo.distribucionDientes).length > 0 && (() => {
-                const totalD = Object.values(m.boqueo.distribucionDientes).reduce((a, b) => a + b, 0);
-                return (
-                  <div className="flex flex-col mt-3" style={{ gap: '0.4rem' }}>
-                    <p className="text-xs font-semibold" style={{ color: '#6B7280' }}>Edad estimada por dientes</p>
-                    {['Dos','Cuatro','Seis','Ocho'].filter(k => m.boqueo.distribucionDientes[k]).map(k => (
-                      <div key={k}>
-                        <RowMetrica
-                          label={`${DIENTES_LABELS[k]} · ${DIENTES_EDAD[k]}`}
-                          value={`${m.boqueo.distribucionDientes[k]} (${Math.round(m.boqueo.distribucionDientes[k] / totalD * 100)}%)`}
-                        />
-                        <BarraProgreso pct={m.boqueo.distribucionDientes[k] / totalD * 100} />
-                      </div>
-                    ))}
-                  </div>
-                );
+              {/* Edad estimada — usa distribución precisa (dentadura+deterioro) si disponible, sino fallback por dientes */}
+              {(() => {
+                const edadDist = m.boqueo.edadEstimadaDistribucion;
+                if (edadDist && Object.keys(edadDist).length > 0) {
+                  const total = Object.values(edadDist).reduce((a, b) => a + b, 0);
+                  return (
+                    <div className="flex flex-col mt-3" style={{ gap: '0.4rem' }}>
+                      <p className="text-xs font-semibold" style={{ color: '#6B7280' }}>Edad estimada (dentadura + deterioro)</p>
+                      {Object.entries(edadDist).map(([label, v]) => (
+                        <div key={label}>
+                          <RowMetrica label={label} value={`${v} (${Math.round(v / total * 100)}%)`} />
+                          <BarraProgreso pct={v / total * 100} />
+                        </div>
+                      ))}
+                    </div>
+                  );
+                }
+                // Fallback para sesiones antiguas sin edadEstimadaDistribucion
+                if (m.boqueo.distribucionDientes && Object.keys(m.boqueo.distribucionDientes).length > 0) {
+                  const totalD = Object.values(m.boqueo.distribucionDientes).reduce((a, b) => a + b, 0);
+                  return (
+                    <div className="flex flex-col mt-3" style={{ gap: '0.4rem' }}>
+                      <p className="text-xs font-semibold" style={{ color: '#6B7280' }}>Edad estimada por dientes</p>
+                      {['Dos','Cuatro','Seis','Ocho'].filter(k => m.boqueo.distribucionDientes[k]).map(k => (
+                        <div key={k}>
+                          <RowMetrica
+                            label={`${DIENTES_LABELS[k]} · ${DIENTES_EDAD[k]}`}
+                            value={`${m.boqueo.distribucionDientes[k]} (${Math.round(m.boqueo.distribucionDientes[k] / totalD * 100)}%)`}
+                          />
+                          <BarraProgreso pct={m.boqueo.distribucionDientes[k] / totalD * 100} />
+                        </div>
+                      ))}
+                    </div>
+                  );
+                }
+                return null;
               })()}
 
               {Object.values(m.boqueo.deterioro).some(v => v > 0) && (

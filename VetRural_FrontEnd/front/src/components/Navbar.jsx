@@ -14,9 +14,18 @@ export default function Navbar() {
   const location = useLocation();
 
   const enInicio = location.pathname === '/dashboard';
-  const enResumen = location.pathname === '/sesion/resumen';
   const enSesionActiva = /^\/sesion(\/animal|\/registro)?$/.test(location.pathname);
   const mostrarVolver = !enInicio && !enSesionActiva;
+
+  function resolverVolver(pathname) {
+    if (pathname === '/sesion/resumen') return '/historial';
+    const editarMatch = pathname.match(/^\/animales\/(.+)\/editar$/);
+    if (editarMatch) return `/animales/${editarMatch[1]}`;
+    if (/^\/animales\/.+/.test(pathname)) return '/animales';
+    if (['/animales', '/historial', '/metricas', '/partes', '/miembros', '/invitaciones'].includes(pathname)) return '/dashboard';
+    if (/^\/sesion/.test(pathname)) return '/dashboard';
+    return null;
+  }
 
   const handleLogout = () => {
     logout();
@@ -39,7 +48,7 @@ export default function Navbar() {
         <div className="flex items-center gap-2 min-w-0 flex-shrink-0">
           {mostrarVolver && (
             <button
-              onClick={() => enResumen ? navigate('/historial', { replace: true }) : navigate(-1)}
+              onClick={() => { const dest = resolverVolver(location.pathname); dest ? navigate(dest) : navigate(-1); }}
               className="flex items-center justify-center w-9 h-9 rounded-xl transition-colors hover:bg-white/10 flex-shrink-0"
               style={{ color: 'white' }}
               aria-label="Volver"
