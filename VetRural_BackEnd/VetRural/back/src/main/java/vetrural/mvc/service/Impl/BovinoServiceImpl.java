@@ -99,6 +99,15 @@ public class BovinoServiceImpl implements BovinoService {
     }
 
     @Override
+    public Bovino darAlta(Long id) {
+        Bovino bovino = obtenerOFallar(id);
+        bovino.setEstado(EstadoBovinoEnum.Activo);
+        bovino.setFechaBaja(null);
+        bovino.setMotivoBaja(null);
+        return bovinoRepository.save(bovino);
+    }
+
+    @Override
     public boolean existePorCaravana(String caravana) {
         return bovinoRepository.existsByCaravana(caravana);
     }

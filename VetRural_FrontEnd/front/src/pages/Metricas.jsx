@@ -122,7 +122,7 @@ function AlertasAgrupadas({ alertas }) {
           <p className="text-sm font-semibold" style={{ color: 'var(--verde-oscuro)' }}>Sin alertas activas para este filtro</p>
         </div>
       ) : (
-        <div className="flex flex-col" style={{ gap: '0.5rem' }}>
+        <div className="flex flex-col" style={{ gap: '0.4rem' }}>
           {grupos.map(([motivo, caravanas]) => {
             const abierto = expandido === motivo;
             const esSolo = caravanas.length === 1;
@@ -130,34 +130,29 @@ function AlertasAgrupadas({ alertas }) {
               <div key={motivo}>
                 <button
                   onClick={() => !esSolo && setExpandido(abierto ? null : motivo)}
-                  className="w-full flex items-center justify-between px-4 py-2.5 rounded-xl"
-                  style={{
-                    backgroundColor: '#FFFBEB',
-                    border: '1px solid #FDE68A',
-                    cursor: esSolo ? 'default' : 'pointer',
-                  }}
+                  className="w-full flex items-center justify-between py-2 text-left"
+                  style={{ cursor: esSolo ? 'default' : 'pointer' }}
                 >
-                  <div className="flex items-center gap-2 min-w-0 text-left">
+                  <div className="flex items-center gap-2 min-w-0">
                     <AlertTriangle className="w-4 h-4 flex-shrink-0" style={{ color: '#D97706' }} />
-                    <span className="text-sm font-semibold" style={{ color: '#92400E' }}>
+                    <span className="text-sm font-semibold" style={{ color: '#374151' }}>
                       {esSolo
                         ? `N° ${caravanas[0]}: ${motivo}`
                         : `${caravanas.length} animales: ${motivo}`}
                     </span>
                   </div>
                   {!esSolo && (
-                    <span className="text-xs font-bold flex-shrink-0 ml-2" style={{ color: '#D97706' }}>
+                    <span className="text-xs font-bold flex-shrink-0 ml-2" style={{ color: '#9CA3AF' }}>
                       {abierto ? '▲' : '▼'}
                     </span>
                   )}
                 </button>
                 {abierto && !esSolo && (
-                  <div className="mt-1 flex flex-col gap-1 pl-4">
+                  <div className="flex flex-col gap-0.5 pl-6 mb-1">
                     {caravanas.map(car => (
-                      <div key={car} className="px-3 py-1.5 rounded-lg"
-                        style={{ backgroundColor: '#FFFBEB', border: '1px solid #FEF3C7' }}>
-                        <span className="text-xs font-semibold" style={{ color: '#92400E' }}>N° {car}</span>
-                      </div>
+                      <span key={car} className="text-xs font-semibold" style={{ color: '#6B7280' }}>
+                        N° {car}
+                      </span>
                     ))}
                   </div>
                 )}

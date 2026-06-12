@@ -210,10 +210,6 @@ export default function NuevoAnimal() {
     // Caravana
     if (!form.caravana.trim()) {
       e.caravana = 'La caravana es obligatoria';
-    } else if (form.caravana.length < 15) {
-      e.caravana = `La caravana debe tener 15 caracteres (actualmente: ${form.caravana.length})`;
-    } else if (!/^[A-Z0-9]{15}$/.test(form.caravana)) {
-      e.caravana = 'La caravana solo puede contener letras mayúsculas y números';
     } else if (caravanaExiste) {
       e.caravana = 'Esta caravana ya está registrada en el sistema';
     }
@@ -397,29 +393,26 @@ const handleSubmit = async (e) => {
 
         {/* ── Datos generales ── */}
         <Seccion titulo="Datos generales" Icon={PawPrint}>
-          <Field label="Caravana electrónica" required>
+          <Field label="Caravana" required>
             <div style={{ position: 'relative' }}>
               <input
                 autoFocus
                 value={form.caravana}
-                onChange={e => set('caravana', e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
-                placeholder="000000000000000"
+                onChange={e => set('caravana', e.target.value.toUpperCase())}
+                placeholder="Ej: ABC123"
                 maxLength={15}
                 className={inputCls}
-                style={{ ...inputSty, borderColor: errores.caravana ? '#EF4444' : form.caravana.length === 15 ? '#10B981' : '#D1D5DB', fontFamily: 'monospace', fontSize: '1rem', paddingRight: '3.5rem' }}
+                style={{ ...inputSty, borderColor: errores.caravana ? '#EF4444' : form.caravana.length > 0 ? '#10B981' : '#D1D5DB', fontFamily: 'monospace', fontSize: '1rem', paddingRight: '3.5rem' }}
               />
               <span style={{
                 position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)',
                 fontSize: '0.75rem', fontWeight: 700,
-                color: form.caravana.length === 15 ? '#10B981' : form.caravana.length > 0 ? '#F59E0B' : '#9CA3AF',
+                color: form.caravana.length === 15 ? '#F59E0B' : '#9CA3AF',
               }}>
                 {form.caravana.length}/15
               </span>
             </div>
             {errores.caravana && <p className="text-xs mt-1" style={{ color: '#EF4444' }}>{errores.caravana}</p>}
-            {!errores.caravana && form.caravana.length === 15 && !caravanaExiste && (
-              <p className="text-xs mt-1 font-semibold" style={{ color: '#10B981' }}>✓ Formato correcto</p>
-            )}
           </Field>
 
           <Field label="Sexo" required>

@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { RefreshCw, Pencil, ChevronDown, ChevronUp, Scale, Hand, Smile, TrendingUp, Syringe, History, Lock, FileText } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import LoadingSpinner from '../components/LoadingSpinner';
-import { getAnimalById } from '../api/animalesApi';
+import { getAnimalById, darDeAltaAnimal } from '../api/animalesApi';
 import api from '../api/axios';
 
 const VACUNA_INTERVALO_DIAS = {
@@ -81,14 +81,13 @@ const VACUNAS = [
   { value: 'BVD',         label: 'BVD' },
 ];
 
-function vacunaBadge(vac) {
-  if (!vac) return { color: '#6B7280', bg: '#F3F4F6', label: 'Sin registro' };
+function vacunaEstado(vac) {
+  if (!vac) return { fecha: null, vigente: null };
   const d = parseFecha(vac.fechaHora);
-  if (!d) return { color: '#6B7280', bg: '#F3F4F6', label: 'Sin registro' };
+  if (!d) return { fecha: null, vigente: null };
   const dias = Math.floor((Date.now() - d.getTime()) / 86400000);
   const intervalo = VACUNA_INTERVALO_DIAS[vac.vacuna] ?? 365;
-  if (dias <= intervalo) return { color: '#065F46', bg: '#D1FAE5', label: formatFechaHora(vac.fechaHora) + ' ✓' };
-  return { color: '#991B1B', bg: '#FEE2E2', label: formatFechaHora(vac.fechaHora) + ' ✗' };
+  return { fecha: formatFechaHora(vac.fechaHora), vigente: dias <= intervalo };
 }
 
 function formatEnum(valor) {
@@ -99,27 +98,26 @@ function formatEnum(valor) {
 function edadDesdeBoqueo(boqueo) {
   const { dientes, dentadura, deterioro } = boqueo ?? {};
   if (!dientes) return null;
-  if (dentadura === 'De_Leche') return '< 1.5 años (dientes de leche)';
+  if (dentadura === 'De_Leche') return 'Menos de 1.5 años';
   if (dentadura === 'Mixta') {
-    const map = { Dos: '1.5–2 años', Cuatro: '~2.5–3 años', Seis: '~3.5–4 años', Ocho: '~4–5 años' };
+    const map = { Dos: '1.5–2 años', Cuatro: '2.5–3 años', Seis: '3.5–4 años', Ocho: '4–5 años' };
     const rango = map[dientes];
-    return rango ? `${rango} (${dientes.toLowerCase()} dientes, dentadura mixta)` : null;
+    return rango ?? null;
   }
   if (dentadura === 'Permanente') {
-    if (dientes === 'Dos')    return '~2 años (2 dientes permanentes)';
-    if (dientes === 'Cuatro') return '~3 años (4 dientes permanentes)';
-    if (dientes === 'Seis')   return '~4 años (6 dientes permanentes)';
+    if (dientes === 'Dos')    return 'Alrededor de 2 años';
+    if (dientes === 'Cuatro') return 'Alrededor de 3 años';
+    if (dientes === 'Seis')   return 'Alrededor de 4 años';
     const porDeterioro = {
-      Nulo:     '5–6 años (boca llena, sin desgaste)',
-      Leve:     '6–7 años (boca llena, desgaste leve)',
-      Moderado: '7–9 años (desgaste moderado)',
-      Severo:   '≥ 10 años (desgaste severo)',
+      Nulo:     '5–6 años',
+      Leve:     '6–7 años',
+      Moderado: '7–9 años',
+      Severo:   'Más de 10 años',
     };
-    return (deterioro && porDeterioro[deterioro]) ?? '≥ 5 años (boca llena)';
+    return (deterioro && porDeterioro[deterioro]) ?? 'Más de 5 años';
   }
-  const fallback = { Dos: '1.5–2 años', Cuatro: '2.5–3 años', Seis: '3.5–4 años', Ocho: '> 4.5 años' };
-  const rango = fallback[dientes];
-  return rango ? `${rango} (${dientes.toLowerCase()} dientes)` : null;
+  const fallback = { Dos: '1.5–2 años', Cuatro: '2.5–3 años', Seis: '3.5–4 años', Ocho: 'Más de 4.5 años' };
+  return fallback[dientes] ?? null;
 }
 
 export default function DetalleAnimal() {
@@ -135,8 +133,11 @@ export default function DetalleAnimal() {
   const [cargando,     setCargando]     = useState(true);
   const [actualizando, setActualizando] = useState(false);
   const [ultimaActualizacion, setUltimaActualizacion] = useState(null);
-  const [mostrarHistorial, setMostrarHistorial] = useState(false);
-  const [eventos, setEventos] = useState([]);
+  const [mostrarHistorial,  setMostrarHistorial]  = useState(false);
+  const [eventos,           setEventos]           = useState([]);
+  const [cargandoEventos,   setCargandoEventos]   = useState(false);
+  const [errorEventos,      setErrorEventos]      = useState(null);
+  const [dandoDeAlta,       setDandoDeAlta]       = useState(false);
 
   const cargarDatos = useCallback(async (silencioso = false) => {
     if (!silencioso) setCargando(true);
@@ -170,17 +171,23 @@ export default function DetalleAnimal() {
   useEffect(() => { cargarDatos(); }, [cargarDatos]);
 
   const cargarEventos = useCallback(async () => {
+    setCargandoEventos(true);
+    setErrorEventos(null);
     try {
       const res = await api.get(`/manga/${id}/eventos`);
       setEventos(res.data ?? []);
-    } catch {
+    } catch (err) {
+      setErrorEventos(err?.response?.data?.error || 'No se pudieron cargar los eventos.');
       setEventos([]);
+    } finally {
+      setCargandoEventos(false);
     }
   }, [id]);
 
   const handleToggleHistorial = () => {
-    if (!mostrarHistorial && eventos.length === 0) cargarEventos();
-    setMostrarHistorial(v => !v);
+    const abriendo = !mostrarHistorial;
+    setMostrarHistorial(abriendo);
+    if (abriendo) cargarEventos();
   };
 
   // Agrupar eventos por día (sesión)
@@ -223,10 +230,10 @@ export default function DetalleAnimal() {
 
       {/* Banner de baja */}
       {estaDadoDeBaja && (
-        <div className="rounded-2xl px-4 py-3 flex items-start gap-3"
+        <div className="rounded-2xl px-4 py-3 flex items-center gap-3"
           style={{ backgroundColor: '#FEF3C7', border: '1.5px solid #FDE68A' }}>
           <Lock className="w-5 h-5 flex-shrink-0" style={{ color: '#B45309' }} />
-          <div>
+          <div className="flex-1 min-w-0">
             <p className="font-bold text-sm" style={{ color: '#92400E' }}>
               Animal dado de baja — {animal.estado}
             </p>
@@ -237,6 +244,22 @@ export default function DetalleAnimal() {
               </p>
             )}
           </div>
+          <button
+            disabled={dandoDeAlta}
+            onClick={async () => {
+              setDandoDeAlta(true);
+              try {
+                await darDeAltaAnimal(id);
+                await cargarDatos(true);
+              } finally {
+                setDandoDeAlta(false);
+              }
+            }}
+            className="flex-shrink-0 rounded-xl font-semibold text-xs disabled:opacity-60"
+            style={{ backgroundColor: 'white', color: '#92400E', border: '1.5px solid #FDE68A', padding: '0.4rem 0.875rem' }}
+          >
+            {dandoDeAlta ? 'Reactivando...' : 'Dar de alta'}
+          </button>
         </div>
       )}
 
@@ -393,14 +416,22 @@ export default function DetalleAnimal() {
             {VACUNAS.map(({ value, label }) => {
               const vac = vacunas.filter(v => v.vacuna === value)
                 .sort((a, b) => parseFecha(b.fechaHora) - parseFecha(a.fechaHora))[0];
-              const badge = vacunaBadge(vac ? { ...vac, vacuna: value } : null);
+              const est = vacunaEstado(vac ? { ...vac, vacuna: value } : null);
               return (
                 <div key={value} className="flex flex-col gap-1">
                   <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: '#9CA3AF' }}>{label}</span>
-                  <span className="text-xs font-bold px-2 py-1 rounded-full self-start"
-                    style={{ backgroundColor: badge.bg, color: badge.color }}>
-                    {badge.label}
-                  </span>
+                  <div className="flex items-center gap-1.5">
+                    {est.fecha === null ? (
+                      <span className="text-sm font-semibold" style={{ color: '#9CA3AF' }}>Sin registro</span>
+                    ) : (
+                      <>
+                        <span style={{ color: est.vigente ? '#059669' : '#DC2626', fontSize: '1rem', lineHeight: 1, fontWeight: 700 }}>
+                          {est.vigente ? '✓' : '✗'}
+                        </span>
+                        <span className="text-sm font-semibold" style={{ color: '#374151' }}>{est.fecha}</span>
+                      </>
+                    )}
+                  </div>
                 </div>
               );
             })}
@@ -423,7 +454,11 @@ export default function DetalleAnimal() {
           </button>
           {mostrarHistorial && (
             <div className="mt-4 flex flex-col gap-2">
-              {sesionesHistorial.length === 0 ? (
+              {cargandoEventos ? (
+                <p className="text-sm" style={{ color: '#9CA3AF' }}>Cargando eventos...</p>
+              ) : errorEventos ? (
+                <p className="text-sm" style={{ color: '#EF4444' }}>{errorEventos}</p>
+              ) : sesionesHistorial.length === 0 ? (
                 <p className="text-sm" style={{ color: '#9CA3AF' }}>Sin eventos registrados</p>
               ) : (
                 sesionesHistorial.map((sesion, i) => (

@@ -2,12 +2,15 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useEstablecimiento } from '../context/EstablecimientoContext';
 import LoadingSpinner from '../components/LoadingSpinner';
-import { getAnimalesDadosDeBaja } from '../api/animalesApi';
+import { getAnimalesDadosDeBaja, darDeAltaAnimal } from '../api/animalesApi';
+import vacaImg from '../assets/vaca.png';
+import toroImg from '../assets/toro.png';
 
 const ESTADO_STYLE = {
   Vendido:     { bg: '#EBF7F1', color: 'var(--verde-oscuro)', label: 'Vendido' },
   Muerto:      { bg: '#F3F4F6', color: '#374151',             label: 'Muerto' },
   Transferido: { bg: '#FEF3C7', color: '#92400E',             label: 'Transferido' },
+  Otros:       { bg: '#F3F4F6', color: '#6B7280',             label: 'Otros' },
 };
 
 function formatFecha(valor) {
@@ -19,12 +22,137 @@ function formatFecha(valor) {
   return d.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
 
+function BajaCard({ animal, onDarAlta }) {
+  const navigate = useNavigate();
+  const [confirmando, setConfirmando] = useState(false);
+  const [guardando,   setGuardando]   = useState(false);
+
+  const st = ESTADO_STYLE[animal.estado] ?? { bg: '#F3F4F6', color: '#6B7280', label: animal.estado };
+  const esMacho = animal.sexo === 'Macho';
+
+  const handleConfirmar = async (e) => {
+    e.stopPropagation();
+    setGuardando(true);
+    try {
+      await onDarAlta(animal.id);
+    } catch {
+      setGuardando(false);
+      setConfirmando(false);
+    }
+  };
+
+  return (
+    <div
+      className="flex flex-col rounded-2xl bg-white"
+      style={{ padding: '0.875rem 1rem', border: '1.5px solid #E5E7EB', gap: '0.6rem' }}
+    >
+      {/* Fila principal */}
+      <div className="flex items-center" style={{ gap: '0.75rem' }}>
+        {/* Imagen + info — clickeable */}
+        <button
+          className="flex items-center flex-1 min-w-0 text-left"
+          style={{ gap: '0.6rem' }}
+          onClick={() => navigate(`/animales/${animal.id}`)}
+          disabled={guardando}
+        >
+          <div className="rounded-xl flex items-center justify-center flex-shrink-0"
+            style={{ backgroundColor: '#F9FAFB', width: '3.8rem', height: '3.8rem' }}>
+            <img
+              src={esMacho ? toroImg : vacaImg}
+              alt={esMacho ? 'Toro' : 'Vaca'}
+              style={{ width: '3.6rem', height: '3.6rem' }}
+              className="object-contain"
+            />
+          </div>
+
+          <div className="min-w-0 flex flex-col" style={{ gap: '0.2rem' }}>
+            <div className="flex items-baseline overflow-hidden" style={{ gap: '0.5rem' }}>
+              <p className="font-bold truncate flex-shrink-0" style={{ color: 'var(--verde-oscuro)', fontSize: '1.4rem' }}>
+                N° {animal.caravana}
+              </p>
+              {animal.apodo && (
+                <p className="font-semibold truncate" style={{ color: '#9CA3AF', fontSize: '1.2rem' }}>{animal.apodo}</p>
+              )}
+            </div>
+            {/* Chips horizontales */}
+            <div className="flex flex-wrap items-center" style={{ gap: '0.3rem' }}>
+              <span className="px-2 py-0.5 rounded-full text-xs font-bold flex-shrink-0"
+                style={{ backgroundColor: st.bg, color: st.color }}>
+                {st.label}
+              </span>
+              {animal.tipo && (
+                <span className="px-2 py-0.5 rounded-full text-xs font-semibold flex-shrink-0"
+                  style={{ backgroundColor: '#F3F4F6', color: '#6B7280' }}>
+                  {animal.tipo}
+                </span>
+              )}
+              {animal.lote && (
+                <span className="px-2 py-0.5 rounded-full text-xs font-semibold flex-shrink-0"
+                  style={{ backgroundColor: '#F3F4F6', color: '#6B7280' }}>
+                  Lote: {animal.lote}
+                </span>
+              )}
+              {animal.fechaBaja && (
+                <span className="text-xs flex-shrink-0" style={{ color: '#9CA3AF' }}>
+                  Baja: {formatFecha(animal.fechaBaja)}
+                </span>
+              )}
+              {animal.motivoBaja && (
+                <span className="text-xs flex-shrink-0" style={{ color: '#6B7280' }}>{animal.motivoBaja}</span>
+              )}
+            </div>
+          </div>
+        </button>
+
+        {/* Botón dar de alta */}
+        {!confirmando && (
+          <button
+            onClick={e => { e.stopPropagation(); setConfirmando(true); }}
+            className="flex-shrink-0 rounded-xl font-semibold text-xs transition-colors hover:opacity-80"
+            style={{ backgroundColor: '#EBF7F1', color: 'var(--verde-oscuro)', padding: '0.4rem 0.75rem', border: '1px solid #C8E6D8' }}
+            title="Dar de alta"
+          >
+            Dar de alta
+          </button>
+        )}
+      </div>
+
+      {/* Panel confirmación */}
+      {confirmando && (
+        <div className="flex items-center gap-2 px-1"
+          onClick={e => e.stopPropagation()}>
+          <p className="text-xs font-semibold flex-1" style={{ color: '#374151' }}>
+            ¿Reactivar N° {animal.caravana}?
+          </p>
+          <button
+            onClick={handleConfirmar}
+            disabled={guardando}
+            className="rounded-lg font-semibold text-xs disabled:opacity-60"
+            style={{ backgroundColor: 'var(--verde-medio)', color: 'white', padding: '0.35rem 0.75rem' }}
+          >
+            {guardando ? 'Guardando...' : 'Confirmar'}
+          </button>
+          <button
+            onClick={e => { e.stopPropagation(); setConfirmando(false); }}
+            disabled={guardando}
+            className="rounded-lg font-semibold text-xs disabled:opacity-50"
+            style={{ backgroundColor: '#F3F4F6', color: '#6B7280', padding: '0.35rem 0.75rem' }}
+          >
+            Cancelar
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function AnimalesBajas() {
   const navigate = useNavigate();
   const { seleccionado } = useEstablecimiento();
   const [bajas,    setBajas]    = useState([]);
   const [cargando, setCargando] = useState(true);
   const [busqueda, setBusqueda] = useState('');
+  const [filtroSexo, setFiltroSexo] = useState('Todos');
 
   useEffect(() => {
     if (!seleccionado) { setCargando(false); return; }
@@ -34,7 +162,13 @@ export default function AnimalesBajas() {
       .finally(() => setCargando(false));
   }, [seleccionado?.id]);
 
+  const handleDarAlta = async (id) => {
+    await darDeAltaAnimal(id);
+    setBajas(prev => prev.filter(a => a.id !== id));
+  };
+
   const filtradas = bajas.filter(a => {
+    if (filtroSexo !== 'Todos' && a.sexo !== filtroSexo) return false;
     if (!busqueda) return true;
     const q = busqueda.toLowerCase();
     return (
@@ -78,71 +212,46 @@ export default function AnimalesBajas() {
       ) : (
         <>
           {bajas.length > 0 && (
-            <input
-              type="text"
-              placeholder="Buscar por caravana, apodo o motivo..."
-              value={busqueda}
-              onChange={e => setBusqueda(e.target.value)}
-              className="w-full rounded-2xl border bg-white"
-              style={{ borderColor: '#D1D5DB', padding: '0.875rem 1.25rem', fontSize: '1rem' }}
-            />
+            <>
+              <input
+                type="text"
+                placeholder="Buscar por caravana, apodo o motivo..."
+                value={busqueda}
+                onChange={e => setBusqueda(e.target.value)}
+                className="w-full rounded-2xl border bg-white"
+                style={{ borderColor: '#D1D5DB', padding: '0.875rem 1.25rem', fontSize: '1rem' }}
+              />
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold flex-shrink-0" style={{ color: '#6B7280' }}>Sexo</span>
+                <div className="flex rounded-xl overflow-hidden" style={{ border: '1.5px solid #E5E7EB' }}>
+                  {['Todos', 'Hembra', 'Macho'].map(s => (
+                    <button key={s} onClick={() => setFiltroSexo(s)}
+                      className="font-semibold transition-colors"
+                      style={{
+                        padding: '0.4rem 0.875rem', fontSize: '0.85rem',
+                        ...(filtroSexo === s
+                          ? { backgroundColor: 'var(--verde-oscuro)', color: 'white' }
+                          : { backgroundColor: 'white', color: '#6B7280' })
+                      }}>
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </>
           )}
 
           {filtradas.length === 0 ? (
             <div className="text-center py-24">
               <p className="text-lg font-semibold" style={{ color: '#374151' }}>
-                {busqueda ? 'No se encontraron resultados' : 'Sin animales dados de baja en este establecimiento'}
+                {busqueda || filtroSexo !== 'Todos' ? 'No se encontraron resultados' : 'Sin animales dados de baja en este establecimiento'}
               </p>
             </div>
           ) : (
             <div className="flex flex-col gap-2">
-              {filtradas.map(a => {
-                const st = ESTADO_STYLE[a.estado] ?? { bg: '#F3F4F6', color: '#6B7280', label: a.estado };
-                return (
-                  <div
-                    key={a.id}
-                    onClick={() => navigate(`/animales/${a.id}`)}
-                    className="card flex items-center gap-4 cursor-pointer hover:shadow-md transition-shadow"
-                    style={{ padding: '1rem 1.5rem' }}
-                  >
-                    {/* N° Caravana — prominente */}
-                    <div className="flex-shrink-0" style={{ minWidth: '10rem' }}>
-                      <p className="font-mono font-bold" style={{ color: 'var(--verde-oscuro)', fontSize: '1.1rem' }}>
-                        N° {a.caravana}
-                      </p>
-                      {a.apodo && (
-                        <p className="text-xs mt-0.5" style={{ color: '#9CA3AF' }}>"{a.apodo}"</p>
-                      )}
-                    </div>
-
-                    {/* Datos horizontales */}
-                    <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0">
-                      <span className="px-2 py-0.5 rounded-full text-xs font-bold flex-shrink-0"
-                        style={{ backgroundColor: st.bg, color: st.color }}>
-                        {st.label}
-                      </span>
-                      {a.tipo && (
-                        <span className="text-xs font-semibold flex-shrink-0" style={{ color: '#6B7280' }}>{a.tipo}</span>
-                      )}
-                      {a.lote && (
-                        <span className="text-xs flex-shrink-0" style={{ color: '#9CA3AF' }}>Lote: {a.lote}</span>
-                      )}
-                      {a.fechaBaja && (
-                        <span className="text-xs flex-shrink-0" style={{ color: '#9CA3AF' }}>Baja: {formatFecha(a.fechaBaja)}</span>
-                      )}
-                      {a.motivoBaja && (
-                        <span className="text-xs flex-shrink-0" style={{ color: '#6B7280' }}>{a.motivoBaja}</span>
-                      )}
-                    </div>
-
-                    {/* Flecha */}
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}
-                      className="w-5 h-5 flex-shrink-0" style={{ color: '#9CA3AF' }}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                    </svg>
-                  </div>
-                );
-              })}
+              {filtradas.map(a => (
+                <BajaCard key={a.id} animal={a} onDarAlta={handleDarAlta} />
+              ))}
             </div>
           )}
         </>

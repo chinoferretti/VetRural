@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Scale, Hand, Syringe, Smile, Download, Share2, CheckCircle2, AlertTriangle, PawPrint } from 'lucide-react';
@@ -102,10 +102,23 @@ export default function SesionResumen() {
   const { seleccionado } = useEstablecimiento();
   const { usuario } = useAuth();
   const historialKey = `vetrural_historial_${usuario?.id || 'anon'}`;
-  const [metricas, setMetricas] = useState(null);
+  const [metricas,   setMetricas]   = useState(null);
+  const [filtroSexo, setFiltroSexo] = useState('Todos');
 
-  const registros  = state?.registros ?? [];
-  const trabajos   = state?.trabajos  ?? [];
+  const registros = state?.registros ?? [];
+  const trabajos  = state?.trabajos  ?? [];
+
+  const distribucionSesion = useMemo(() => {
+    const regs = filtroSexo === 'Todos'
+      ? registros
+      : registros.filter(r => r.animal?.sexo === filtroSexo);
+    const dist = {};
+    regs.forEach(r => {
+      const tipo = r.animal?.tipo || 'Sin tipo';
+      dist[tipo] = (dist[tipo] || 0) + 1;
+    });
+    return dist;
+  }, [registros, filtroSexo]);
   const sesionIdRef = useRef(Date.now().toString());
 
   useEffect(() => {
@@ -375,24 +388,53 @@ export default function SesionResumen() {
         </SecMetrica>
       )}
 
-      {/* Composición del lote */}
-      {m.distribucionTipo && Object.keys(m.distribucionTipo).length > 0 && (() => {
-        const totalTipo = Object.values(m.distribucionTipo).reduce((a, b) => a + b, 0);
+      {/* Composición de la sesión */}
+      {registros.length > 0 && (() => {
+        const totalSesion = Object.values(distribucionSesion).reduce((a, b) => a + b, 0);
         const entradas = TIPOS_ORDEN
-          .filter(t => m.distribucionTipo[t])
-          .map(t => [t, m.distribucionTipo[t]])
-          .concat(Object.entries(m.distribucionTipo).filter(([t]) => !TIPOS_ORDEN.includes(t)));
+          .filter(t => distribucionSesion[t])
+          .map(t => [t, distribucionSesion[t]])
+          .concat(Object.entries(distribucionSesion).filter(([t]) => !TIPOS_ORDEN.includes(t)));
         return (
-          <SecMetrica titulo="Composición del lote" Icon={PawPrint}>
-            {entradas.map(([tipo, cnt]) => (
-              <div key={tipo}>
-                <RowMetrica
-                  label={tipo}
-                  value={`${cnt} (${Math.round(cnt / totalTipo * 100)}%)`}
-                />
-                <BarraProgreso pct={cnt / totalTipo * 100} />
+          <SecMetrica titulo="Composición de la sesión" Icon={PawPrint}>
+            {/* Filtro sexo */}
+            <div className="col-span-full flex items-center gap-2 mb-1">
+              <span className="text-xs font-semibold flex-shrink-0" style={{ color: '#6B7280' }}>Sexo</span>
+              <div className="flex rounded-xl overflow-hidden" style={{ border: '1.5px solid #E5E7EB' }}>
+                {['Todos', 'Hembra', 'Macho'].map(s => (
+                  <button key={s} onClick={() => setFiltroSexo(s)}
+                    className="font-semibold transition-colors"
+                    style={{
+                      padding: '0.3rem 0.75rem', fontSize: '0.8rem',
+                      ...(filtroSexo === s
+                        ? { backgroundColor: 'var(--verde-oscuro)', color: 'white' }
+                        : { backgroundColor: 'white', color: '#6B7280' })
+                    }}>
+                    {s}
+                  </button>
+                ))}
               </div>
-            ))}
+              {filtroSexo !== 'Todos' && (
+                <span className="text-xs" style={{ color: '#9CA3AF' }}>
+                  {totalSesion} de {registros.length} animales
+                </span>
+              )}
+            </div>
+            {totalSesion === 0 ? (
+              <p className="text-sm col-span-full" style={{ color: '#9CA3AF' }}>
+                Sin animales {filtroSexo === 'Hembra' ? 'hembras' : 'machos'} en esta sesión
+              </p>
+            ) : (
+              entradas.map(([tipo, cnt]) => (
+                <div key={tipo} className="col-span-full">
+                  <RowMetrica
+                    label={tipo}
+                    value={`${cnt} (${Math.round(cnt / totalSesion * 100)}%)`}
+                  />
+                  <BarraProgreso pct={cnt / totalSesion * 100} />
+                </div>
+              ))
+            )}
           </SecMetrica>
         );
       })()}

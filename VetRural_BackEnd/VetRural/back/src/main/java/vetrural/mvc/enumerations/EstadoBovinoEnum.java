@@ -4,5 +4,6 @@ public enum EstadoBovinoEnum {
     Activo,
     Vendido,
     Muerto,
-    Transferido
+    Transferido,
+    Otros
 }

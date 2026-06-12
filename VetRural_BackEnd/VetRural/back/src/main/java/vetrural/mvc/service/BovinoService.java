@@ -16,6 +16,7 @@ public interface BovinoService {
     Bovino actualizarBovino(Long id, String caravana, Long establecimientoId, LocalDate nacimiento, SexoEnum sexo, String lote, RazaBovinoEnum raza, TipoBovinoEnum tipo, String obs, String apodo);
     void eliminarBovino(Long id);
     Bovino darBaja(Long id, EstadoBovinoEnum estado, String motivoBaja);
+    Bovino darAlta(Long id);
     boolean existePorCaravana(String caravana);
     Optional<Bovino> getBovino(Long id);
     Optional<Bovino> getBovinoPorCaravana(String caravana);

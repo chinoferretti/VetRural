@@ -175,7 +175,8 @@ export default function SesionRegistro() {
   const guardarEventos = async () => {
     const bovinoId        = animal.id;
     const registradoPorId = veterinarioId;
-    if (!bovinoId || !registradoPorId) return;
+    if (!bovinoId) throw new Error('No se encontró el animal. Reiniciá la sesión.');
+    if (!registradoPorId) throw new Error('No se pudo identificar al veterinario. Reiniciá la sesión.');
 
     const promises = [];
 

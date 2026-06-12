@@ -88,7 +88,7 @@ function CampoFijo({ label, valor }) {
       <label className="text-sm font-semibold" style={{ color: '#374151' }}>{label}</label>
       <div
         className="w-full rounded-xl flex items-center"
-        style={{ ...inputSty, backgroundColor: '#F9FAFB', border: '1px solid #E5E7EB', color: '#6B7280', fontFamily: label === 'Caravana electrónica' ? 'monospace' : undefined, fontSize: '1rem' }}
+        style={{ ...inputSty, backgroundColor: '#F9FAFB', border: '1px solid #E5E7EB', color: '#6B7280', fontFamily: label === 'Caravana' ? 'monospace' : undefined, fontSize: '1rem' }}
       >
         {valor}
       </div>
@@ -284,7 +284,7 @@ export default function EditarAnimal() {
 
         {/* ── Datos generales ── */}
         <Seccion titulo="Datos generales" Icon={PawPrint}>
-          <CampoFijo label="Caravana electrónica" valor={form.caravana} />
+          <CampoFijo label="Caravana" valor={form.caravana} />
           <CampoFijo label="Sexo" valor={form.sexo} />
 
           <Field label="Apodo">

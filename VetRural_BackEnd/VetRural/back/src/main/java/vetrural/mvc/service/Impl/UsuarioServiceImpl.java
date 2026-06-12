@@ -73,7 +73,7 @@ public class UsuarioServiceImpl implements UsuarioService {
 
     @Override
     public boolean puedeRegistrarEventoSanitario(Usuario u) {
-        return u.getTipo() == TipoUsuarioEnum.Veterinario || u.getTipo() == TipoUsuarioEnum.Anotador;
+        return true;
     }
 
     @Override

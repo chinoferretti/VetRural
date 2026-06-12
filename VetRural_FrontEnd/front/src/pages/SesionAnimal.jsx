@@ -167,16 +167,8 @@ export default function SesionAnimal() {
   return (
     <div className="flex flex-col flex-1" style={{ gap: '1.25rem' }}>
 
-      {/* Header */}
-      <div className="flex items-center justify-between" style={{ flexShrink: 0 }}>
-        <div>
-          <h1 className="font-bold" style={{ color: 'var(--verde-oscuro)', fontSize: 'clamp(1.2rem, 3vw, 1.75rem)' }}>
-            Identificar animal
-          </h1>
-          <p className="text-sm mt-0.5" style={{ color: '#9CA3AF' }}>
-            {sesion.trabajos.map(t => t.charAt(0).toUpperCase() + t.slice(1)).join(' · ')}
-          </p>
-        </div>
+      {/* Cancelar sesión — top right */}
+      <div className="flex justify-end" style={{ flexShrink: 0 }}>
         <button onClick={cancelarSesion}
           className="px-5 py-3 rounded-xl font-semibold flex-shrink-0"
           style={{ backgroundColor: '#FEE2E2', color: '#EF4444', fontSize: 'clamp(0.875rem, 2vw, 1rem)' }}>
@@ -187,8 +179,8 @@ export default function SesionAnimal() {
       {/* Input caravana */}
       <div className="card flex flex-col items-center justify-center flex-1"
         style={{ padding: 'clamp(1.5rem, 5vw, 3rem)', gap: '1.5rem' }}>
-        <p className="font-semibold text-center" style={{ color: '#6B7280', fontSize: 'clamp(0.9rem, 2vw, 1.1rem)' }}>
-          Ingresá la caravana del bovino
+        <p className="font-semibold text-center" style={{ color: '#374151', fontSize: 'clamp(0.95rem, 2vw, 1.1rem)' }}>
+          Ingresá el número de caravana
         </p>
         <input
           ref={inputRef}
@@ -214,7 +206,7 @@ export default function SesionAnimal() {
         )}
 
         <button onClick={buscar} disabled={buscando || !caravana.trim()}
-          className="btn-primary w-full disabled:opacity-60"
+          className="btn-primary w-full flex items-center justify-center disabled:opacity-60"
           style={{ maxWidth: '480px', padding: 'clamp(0.9rem, 2.5vw, 1.2rem)', fontSize: 'clamp(1rem, 2.5vw, 1.2rem)' }}>
           {buscando ? 'Buscando...' : 'Buscar'}
         </button>

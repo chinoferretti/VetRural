@@ -4,7 +4,7 @@ import { Pencil, XCircle } from 'lucide-react';
 import vacaImg from '../assets/vaca.png';
 import toroImg from '../assets/toro.png';
 
-const ESTADOS_BAJA = ['Vendido', 'Muerto', 'Transferido'];
+const ESTADOS_BAJA = ['Vendido', 'Muerto', 'Transferido', 'Otros'];
 
 export default function AnimalCard({ animal, onDarBaja }) {
   const navigate = useNavigate();

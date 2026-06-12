@@ -3,14 +3,6 @@ import { loginApi } from '../api/authApi';
 
 const AuthContext = createContext(null);
 
-const DEMO_IDS = new Set([1, 2, 3]);
-
-const USUARIOS_MOCK = [
-  { id: 1, nombre: 'Dr. Carlos Ramírez', email: 'vet@vetrural.com',       password: '1234', rol: 'veterinario', plan: 'Pro' },
-  { id: 2, nombre: 'Juan Pereyra',       email: 'productor@campo.com',    password: '1234', rol: 'productor',   plan: 'Básico' },
-  { id: 3, nombre: 'Pedro Martínez',     email: 'peon@campo.com',         password: '1234', rol: 'otros',       plan: 'Básico' },
-];
-
 const TIPO_A_ROL = {
   Veterinario:           'veterinario',
   Anotador:              'otros',
@@ -51,22 +43,21 @@ export function AuthProvider({ children }) {
       localStorage.setItem('vetrural_token', 'jwt-' + data.idUsuario);
       return userData;
     } catch {
-      // 2. Fallback: usuarios demo y usuarios guardados localmente
-      const todos = [...USUARIOS_MOCK, ...getRegistrados()];
-      const found = todos.find(u => u.email === email && u.password === password);
+      // 2. Fallback offline: usuarios guardados localmente en el dispositivo
+      const found = getRegistrados().find(u => u.email === email && u.password === password);
       if (!found) throw new Error('Credenciales incorrectas');
       const { password: _, ...userData } = found;
       persistir(userData);
-      localStorage.setItem('vetrural_token', 'mock-jwt-' + userData.id);
+      localStorage.setItem('vetrural_token', 'local-jwt-' + userData.id);
       return userData;
     }
   };
 
   const registrar = ({ nombre, apellido, email, password, rol, id }) => {
-    const todos = [...USUARIOS_MOCK, ...getRegistrados()];
-    if (todos.find(u => u.email === email)) throw new Error('El email ya está registrado');
+    const registrados = getRegistrados();
+    if (registrados.find(u => u.email === email)) return; // ya existe, ignorar
     const nuevo = { id: id ?? Date.now(), nombre: `${nombre} ${apellido}`.trim(), email, password, rol, plan: 'Básico' };
-    localStorage.setItem('vetrural_usuarios_registrados', JSON.stringify([...getRegistrados(), nuevo]));
+    localStorage.setItem('vetrural_usuarios_registrados', JSON.stringify([...registrados, nuevo]));
     return nuevo;
   };
 
@@ -76,11 +67,10 @@ export function AuthProvider({ children }) {
     localStorage.removeItem('vetrural_token');
   };
 
-  const tieneRol   = (...roles) => usuario && roles.includes(usuario.rol);
-  const esDemoUser = () => usuario && DEMO_IDS.has(usuario.id);
+  const tieneRol = (...roles) => usuario && roles.includes(usuario.rol);
 
   return (
-    <AuthContext.Provider value={{ usuario, login, registrar, logout, cargando, tieneRol, esDemoUser }}>
+    <AuthContext.Provider value={{ usuario, login, registrar, logout, cargando, tieneRol }}>
       {children}
     </AuthContext.Provider>
   );

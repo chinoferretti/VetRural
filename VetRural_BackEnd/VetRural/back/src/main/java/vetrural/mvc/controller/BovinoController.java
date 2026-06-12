@@ -79,6 +79,12 @@ public class BovinoController {
         return ResponseEntity.ok(BovinoMapper.toResponse(bovino));
     }
 
+    @PutMapping("/{id}/dar-alta")
+    public ResponseEntity<BovinoResponse> darAlta(@PathVariable Long id) {
+        Bovino bovino = bovinoService.darAlta(id);
+        return ResponseEntity.ok(BovinoMapper.toResponse(bovino));
+    }
+
     @PostMapping("/rapido")
     public ResponseEntity<BovinoResponse> crearRapido(@Valid @RequestBody CrearBovinoRapidoRequest req) {
         Bovino bovino = bovinoService.crearBovinoRapido(req.getCaravana(), req.getEstablecimientoId(), req.getSexo());

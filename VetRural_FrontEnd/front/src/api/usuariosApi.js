@@ -44,10 +44,7 @@ export async function getInvitaciones(establecimientoId) {
     const { data } = await api.get(`/establecimientos/${establecimientoId}/invitaciones`);
     return data;
   } catch {
-    // Mock: invitaciones pendientes de ejemplo
-    return [
-      { id: 'inv-1', email: 'nuevo@campo.com', fechaEnvio: '2026-05-01', estado: 'pendiente' },
-    ];
+    return [];
   }
 }
 

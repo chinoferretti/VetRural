@@ -64,3 +64,9 @@ export const getAnimalesDadosDeBaja = async (establecimientoId) => {
   const response = await api.get(`/establecimientos/${establecimientoId}/bovinos/bajas`);
   return response.data;
 };
+
+// PUT /bovinos/:id/dar-alta  →  reactivar animal (estado → Activo, borra fechaBaja y motivoBaja)
+export const darDeAltaAnimal = async (id) => {
+  const response = await api.put(`/bovinos/${id}/dar-alta`);
+  return response.data;
+};
