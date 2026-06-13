@@ -1,34 +1,28 @@
-function key(userId) { return `vetrural_invitaciones_${userId}`; }
-function keyMiembros(estId) { return `vetrural_miembros_${estId}`; }
+import api from './axios';
 
-export function getInvitaciones(userId) {
+export async function getInvitacionesPendientes(usuarioId) {
   try {
-    const stored = localStorage.getItem(key(userId));
-    return stored ? JSON.parse(stored) : [];
+    const { data } = await api.get('/invitaciones', { params: { usuarioId } });
+    return data ?? [];
   } catch { return []; }
 }
 
-export function guardarInvitacion(userId, invitacion) {
-  const lista = getInvitaciones(userId);
-  localStorage.setItem(key(userId), JSON.stringify([...lista, invitacion]));
+export async function crearInvitacion(establecimientoId, usuarioId, remitenteId) {
+  const res = await api.post('/invitaciones', { establecimientoId, usuarioId, remitenteId });
+  return res.data;
 }
 
-export function removerInvitacion(userId, invId) {
-  const lista = getInvitaciones(userId);
-  localStorage.setItem(key(userId), JSON.stringify(lista.filter(i => i.id !== invId)));
+export async function aceptarInvitacion(invitacionId) {
+  await api.post(`/invitaciones/${invitacionId}/aceptar`);
 }
 
-export function getMiembrosLocales(estId) {
-  try { return JSON.parse(localStorage.getItem(keyMiembros(estId)) || '[]'); } catch { return []; }
+export async function rechazarInvitacion(invitacionId) {
+  await api.delete(`/invitaciones/${invitacionId}`);
 }
 
-export function agregarMiembro(estId, miembro) {
-  const lista = getMiembrosLocales(estId);
-  if (lista.find(m => m.id === miembro.id)) return;
-  localStorage.setItem(keyMiembros(estId), JSON.stringify([...lista, miembro]));
-}
-
-export function removerMiembroLocal(estId, userId) {
-  const lista = getMiembrosLocales(estId);
-  localStorage.setItem(keyMiembros(estId), JSON.stringify(lista.filter(m => m.id !== userId)));
+export async function getInvitacionesPorEstablecimiento(establecimientoId) {
+  try {
+    const { data } = await api.get(`/invitaciones/establecimiento/${establecimientoId}`);
+    return data ?? [];
+  } catch { return []; }
 }

@@ -89,7 +89,7 @@ export default function Dashboard() {
           </div>
           <div className="flex-1 text-left">
             <p className="font-bold text-white" style={{ fontSize: 'clamp(0.85rem, 2vh, 1rem)' }}>
-              Gestionar mi establecimiento
+              Gestionar Establecimiento
             </p>
             <p style={{ color: 'var(--acento)', fontSize: 'clamp(0.75rem, 1.5vh, 0.875rem)' }}>
               Miembros, invitaciones y configuración del campo

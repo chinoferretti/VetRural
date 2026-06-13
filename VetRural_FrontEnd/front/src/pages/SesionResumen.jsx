@@ -80,7 +80,7 @@ export default function SesionResumen() {
   const state    = location.state;
   const { seleccionado } = useEstablecimiento();
   const { usuario } = useAuth();
-  const historialKey = `vetrural_historial_${usuario?.id || 'anon'}`;
+  const historialKey = `vetrural_historial_est_${seleccionado?.id || usuario?.id || 'anon'}`;
   const [metricas,   setMetricas]   = useState(null);
   const [filtroSexo, setFiltroSexo] = useState('Todos');
 

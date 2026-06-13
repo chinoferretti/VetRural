@@ -2,60 +2,57 @@ import { useState, useEffect } from 'react';
 import { useEstablecimiento } from '../context/EstablecimientoContext';
 import { useAuth } from '../context/AuthContext';
 import { getMiembros, removerMiembro, buscarUsuarioPorEmail } from '../api/usuariosApi';
-import { asociarUsuario } from '../api/establecimientosApi';
+import { crearInvitacion, getInvitacionesPorEstablecimiento, rechazarInvitacion } from '../api/invitacionesApi';
 
-const ROL_CONFIG = {
-  veterinario: { label: 'Veterinario', color: '#065F46', bg: '#D1FAE5' },
-  productor:   { label: 'Productor',   color: 'var(--verde-oscuro)', bg: '#EBF7F1' },
-  otros:       { label: 'Colaborador', color: '#374151', bg: '#F3F4F6' },
+const ROL_LABEL = {
+  veterinario: 'Veterinario',
+  productor:   'Productor',
+  otros:       'Colaborador',
 };
-
-function Badge({ valor }) {
-  const cfg = ROL_CONFIG[valor];
-  if (!cfg) return null;
-  return (
-    <span className="text-xs font-semibold px-2.5 py-1 rounded-full"
-      style={{ backgroundColor: cfg.bg, color: cfg.color }}>
-      {cfg.label}
-    </span>
-  );
-}
 
 export default function Miembros() {
   const { seleccionado } = useEstablecimiento();
   const { usuario } = useAuth();
 
-  const [miembros,  setMiembros]  = useState([]);
-  const [email,     setEmail]     = useState('');
-  const [feedback,  setFeedback]  = useState(null);
+  const [miembros,     setMiembros]     = useState([]);
+  const [pendientes,   setPendientes]   = useState([]);
+  const [email,        setEmail]        = useState('');
+  const [errorInvitar, setErrorInvitar] = useState('');
+  const [exito,        setExito]        = useState('');
 
   useEffect(() => {
     if (!seleccionado?.id) return;
     getMiembros(seleccionado.id).then(setMiembros);
+    getInvitacionesPorEstablecimiento(seleccionado.id).then(setPendientes);
   }, [seleccionado?.id]);
 
   const handleInvitar = async (e) => {
     e.preventDefault();
     const emailTrimmed = email.trim().toLowerCase();
     if (!emailTrimmed || !emailTrimmed.includes('@')) {
-      setFeedback({ tipo: 'error', msg: 'Ingresá un email válido.' });
+      setErrorInvitar('Ingresá un email válido.');
       return;
     }
 
     const invitado = await buscarUsuarioPorEmail(emailTrimmed);
     if (!invitado) {
-      setFeedback({ tipo: 'error', msg: 'No se encontró ningún usuario con ese email.' });
+      setErrorInvitar('No se encontró ningún usuario con ese email.');
       return;
     }
 
     try {
-      await asociarUsuario(seleccionado.id, invitado.id);
-      const actualizados = await getMiembros(seleccionado.id);
-      setMiembros(actualizados);
+      await crearInvitacion(seleccionado.id, invitado.id, usuario.id);
       setEmail('');
-      setFeedback({ tipo: 'ok', msg: `${invitado.nombre} fue agregado al establecimiento.` });
-    } catch {
-      setFeedback({ tipo: 'error', msg: 'No se pudo agregar al usuario. Intentá nuevamente.' });
+      setErrorInvitar('');
+      setExito(`Invitación enviada a ${invitado.nombre}`);
+      setTimeout(() => setExito(''), 4000);
+      getInvitacionesPorEstablecimiento(seleccionado.id).then(setPendientes);
+    } catch (err) {
+      if (err?.response?.status === 409) {
+        setErrorInvitar(`${invitado.nombre} ya es miembro o ya tiene una invitación pendiente.`);
+      } else {
+        setErrorInvitar('No se pudo enviar la invitación. Intentá nuevamente.');
+      }
     }
   };
 
@@ -65,7 +62,16 @@ export default function Miembros() {
       await removerMiembro(seleccionado.id, m.id);
       setMiembros(prev => prev.filter(x => x.id !== m.id));
     } catch {
-      setFeedback({ tipo: 'error', msg: 'No se pudo quitar al miembro.' });
+      setErrorInvitar('No se pudo quitar al miembro.');
+    }
+  };
+
+  const handleCancelarInvitacion = async (inv) => {
+    try {
+      await rechazarInvitacion(inv.id);
+      setPendientes(prev => prev.filter(x => x.id !== inv.id));
+    } catch {
+      setErrorInvitar('No se pudo cancelar la invitación.');
     }
   };
 
@@ -73,25 +79,20 @@ export default function Miembros() {
     <div className="flex flex-col flex-1" style={{ minHeight: 0, overflow: 'hidden' }}>
 
       <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-        <div>
-          <h1 className="text-3xl font-bold" style={{ color: 'var(--verde-oscuro)' }}>Miembros</h1>
-          <p className="mt-1 text-sm" style={{ color: '#6B7280' }}>
-            {seleccionado?.nombre ?? 'Establecimiento'} · {miembros.length} miembro{miembros.length !== 1 ? 's' : ''}
-          </p>
-        </div>
+
+        <h1 className="text-3xl font-bold" style={{ color: 'var(--verde-oscuro)' }}>
+          {seleccionado?.nombre ?? 'Establecimiento'}
+        </h1>
 
         <div className="card" style={{ padding: '1.5rem' }}>
-          <h2 className="font-bold mb-3" style={{ color: 'var(--verde-oscuro)', fontSize: '1.05rem' }}>
-            Agregar usuario
+          <h2 className="font-bold mb-4" style={{ color: 'var(--verde-oscuro)', fontSize: '1.05rem' }}>
+            Agregar usuario por email
           </h2>
-          <p className="text-sm mb-4" style={{ color: '#6B7280' }}>
-            Ingresá el email del usuario que querés agregar al establecimiento.
-          </p>
-          <form onSubmit={handleInvitar} className="flex gap-3">
+          <form onSubmit={handleInvitar} className="flex flex-col gap-3 sm:flex-row">
             <input
               type="email"
               value={email}
-              onChange={e => { setEmail(e.target.value); setFeedback(null); }}
+              onChange={e => { setEmail(e.target.value); setErrorInvitar(''); }}
               placeholder="nombre@email.com"
               className="flex-1 rounded-xl border bg-white"
               style={{ borderColor: '#D1D5DB', padding: '0.875rem 1rem', fontSize: '1rem' }}
@@ -103,13 +104,13 @@ export default function Miembros() {
             </button>
           </form>
 
-          {feedback && (
-            <div className="mt-3 px-4 py-3 rounded-xl text-sm font-medium"
-              style={{
-                backgroundColor: feedback.tipo === 'ok' ? '#D1FAE5' : '#FEE2E2',
-                color: feedback.tipo === 'ok' ? '#065F46' : '#991B1B',
-              }}>
-              {feedback.msg}
+          {exito && (
+            <p className="mt-4 text-sm font-medium" style={{ color: '#065F46' }}>{exito}</p>
+          )}
+          {errorInvitar && (
+            <div className="mt-4 px-4 py-3 rounded-xl text-sm font-medium"
+              style={{ backgroundColor: '#FEE2E2', color: '#991B1B' }}>
+              {errorInvitar}
             </div>
           )}
         </div>
@@ -119,7 +120,7 @@ export default function Miembros() {
         {miembros.length > 0 && (
           <div style={{ marginTop: '2rem' }}>
             <h2 className="font-bold mb-3" style={{ color: 'var(--verde-oscuro)', fontSize: '1.05rem' }}>
-              Miembros activos
+              Miembros activos · {miembros.length}
             </h2>
             <div className="flex flex-col gap-2">
               {miembros.map(m => (
@@ -134,7 +135,9 @@ export default function Miembros() {
                     <p className="font-semibold truncate" style={{ color: '#111827' }}>{m.nombre}</p>
                     <p className="text-xs mt-0.5 truncate" style={{ color: '#9CA3AF' }}>{m.email}</p>
                   </div>
-                  <Badge valor={m.rol} />
+                  {ROL_LABEL[m.rol] && (
+                    <p className="text-xs flex-shrink-0" style={{ color: '#9CA3AF' }}>{ROL_LABEL[m.rol]}</p>
+                  )}
                   {m.id !== usuario?.id && m.rol !== 'productor' && (
                     <button onClick={() => handleRemoverMiembro(m)}
                       className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 hover:bg-red-50 transition-colors"
@@ -145,6 +148,38 @@ export default function Miembros() {
                       </svg>
                     </button>
                   )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {pendientes.length > 0 && (
+          <div style={{ marginTop: '2rem' }}>
+            <h2 className="font-bold mb-3" style={{ color: 'var(--verde-oscuro)', fontSize: '1.05rem' }}>
+              Invitaciones pendientes · {pendientes.length}
+            </h2>
+            <div className="flex flex-col gap-2">
+              {pendientes.map(inv => (
+                <div key={inv.id}
+                  className="bg-white rounded-2xl flex items-center gap-4"
+                  style={{ border: '1.5px solid #E5E7EB', padding: '1rem 1.25rem' }}>
+                  <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold flex-shrink-0"
+                    style={{ backgroundColor: '#F3F4F6', color: '#9CA3AF', fontSize: '0.95rem' }}>
+                    {inv.invitadoNombre?.charAt(0) ?? '?'}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold truncate" style={{ color: '#111827' }}>{inv.invitadoNombre}</p>
+                  </div>
+                  <p className="text-xs flex-shrink-0" style={{ color: '#9CA3AF' }}>Pendiente</p>
+                  <button onClick={() => handleCancelarInvitacion(inv)}
+                    className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 hover:bg-red-50 transition-colors"
+                    style={{ border: '1.5px solid #E5E7EB', color: '#EF4444' }}
+                    title="Cancelar invitación">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
                 </div>
               ))}
             </div>

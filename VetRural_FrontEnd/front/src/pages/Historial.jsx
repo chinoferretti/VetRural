@@ -5,6 +5,7 @@ import { formatFecha } from '../utils/formatters';
 import { generarHTMLReporte } from '../utils/reporteUtils';
 import { Download, Trash2, AlertTriangle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useEstablecimiento } from '../context/EstablecimientoContext';
 
 const TRABAJO_COLORES = {
   'Boqueo':      { bg: '#EBF7F1', text: '#1B4332' },
@@ -34,7 +35,8 @@ function descargarMetricas(sesion) {
 export default function Historial() {
   const navigate = useNavigate();
   const { usuario } = useAuth();
-  const historialKey = `vetrural_historial_${usuario?.id || 'anon'}`;
+  const { seleccionado } = useEstablecimiento();
+  const historialKey = `vetrural_historial_est_${seleccionado?.id || usuario?.id || 'anon'}`;
 
   const [visitas,      setVisitas]      = useState([]);
   const [cargando,     setCargando]     = useState(true);

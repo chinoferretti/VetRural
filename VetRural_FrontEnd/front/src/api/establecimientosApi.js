@@ -14,6 +14,10 @@ export const asociarUsuario = async (establecimientoId, usuarioId) => {
   await api.post(`/establecimientos/${establecimientoId}/usuarios/${usuarioId}`);
 };
 
+export const removerMiembro = async (establecimientoId, usuarioId) => {
+  await api.delete(`/establecimientos/${establecimientoId}/usuarios/${usuarioId}`);
+};
+
 export const getMetricasEstablecimiento = async (establecimientoId, { sexo, lote } = {}) => {
   const params = {};
   if (sexo && sexo !== 'Todos') params.sexo = sexo;

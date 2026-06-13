@@ -4,13 +4,15 @@ import api from './axios';
 export async function getVeterinarios() {
   try {
     const { data } = await api.get('/usuarios/veterinarios');
-    return data.map(u => ({
-      id:          u.idUsuario,
-      nombre:      `${u.nombre} ${u.apellido}`.trim(),
-      email:       u.email,
-      matricula:   '',
-      especialidad: 'Veterinario',
-    }));
+    return data
+      .filter(u => u.idUsuario !== -1)
+      .map(u => ({
+        id:          u.idUsuario,
+        nombre:      `${u.nombre} ${u.apellido}`.trim(),
+        email:       u.email,
+        matricula:   '',
+        especialidad: 'Veterinario',
+      }));
   } catch {
     return [];
   }

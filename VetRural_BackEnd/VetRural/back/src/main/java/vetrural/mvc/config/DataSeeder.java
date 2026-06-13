@@ -18,17 +18,18 @@ public class DataSeeder implements ApplicationRunner {
     public void run(ApplicationArguments args) {
         try {
             Integer existe = jdbc.queryForObject(
-                "SELECT COUNT(*) FROM Usuario WHERE idUsuario = -1",
+                "SELECT COUNT(*) FROM usuario WHERE id_usuario = -1",
                 Integer.class
             );
             if (existe == null || existe == 0) {
                 jdbc.update(
-                    "INSERT INTO Usuario (idUsuario, nombre, apellido, email, contrasena, tipo) " +
+                    "INSERT INTO usuario (id_usuario, nombre, apellido, email, contrasena, tipo) " +
                     "VALUES (-1, 'No especifico', '', 'no-especifico@sistema.local', '', 'Veterinario')"
                 );
+                System.out.println("[DataSeeder] Usuario sistema (-1) insertado.");
             }
         } catch (Exception e) {
-            System.err.println("[DataSeeder] " + e.getMessage());
+            System.err.println("[DataSeeder] Error: " + e.getMessage());
         }
     }
 }

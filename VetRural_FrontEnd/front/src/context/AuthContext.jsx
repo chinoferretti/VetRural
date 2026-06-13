@@ -6,7 +6,7 @@ const AuthContext = createContext(null);
 
 function limpiarStorage() {
   Object.keys(localStorage)
-    .filter(k => k.startsWith('vetrural_'))
+    .filter(k => k.startsWith('vetrural_') && !k.startsWith('vetrural_historial_est_'))
     .forEach(k => localStorage.removeItem(k));
 }
 
