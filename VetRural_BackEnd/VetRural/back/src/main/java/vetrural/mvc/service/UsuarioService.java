@@ -16,4 +16,5 @@ public interface UsuarioService {
     void eliminarUsuario(Long idUsuario);
     boolean puedeRegistrarEventoSanitario(Usuario u);
     Optional<Usuario> login(String email, String contrasena);
+    Optional<Usuario> getByEmail(String email);
 }

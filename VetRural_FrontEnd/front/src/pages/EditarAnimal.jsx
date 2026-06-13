@@ -277,14 +277,17 @@ export default function EditarAnimal() {
   const notaClinico = 'Solo se registra si modificás el valor actual';
 
   return (
-    <div className="w-full flex flex-col" style={{ gap: '1.75rem' }}>
+    <div className="w-full flex flex-col flex-1" style={{ minHeight: 0, overflow: 'hidden' }}>
 
-      <div>
+      {/* Header fijo */}
+      <div style={{ flexShrink: 0 }}>
         <h1 className="text-3xl font-bold" style={{ color: 'var(--verde-oscuro)' }}>Editar animal</h1>
         <p className="mt-1 font-mono text-sm" style={{ color: '#9CA3AF' }}>{form.caravana}</p>
       </div>
 
-      <form onSubmit={handleSubmit} className="flex flex-col" style={{ gap: '1.75rem' }}>
+      {/* Formulario scrolleable */}
+      <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', paddingBottom: '0.5rem' }}>
+      <form id="form-editar-animal" onSubmit={handleSubmit} className="flex flex-col" style={{ gap: '1.75rem', paddingTop: '1.75rem' }}>
 
         {/* ── Datos generales ── */}
         <Seccion titulo="Datos generales" Icon={PawPrint}>
@@ -448,17 +451,21 @@ export default function EditarAnimal() {
           ))}
         </Seccion>
 
-        {/* ── Acciones ── */}
-        <div className="flex gap-4 pb-8">
+      </form>
+      </div>
+
+      {/* Botones de acción fijos abajo */}
+      <div style={{ flexShrink: 0, paddingTop: '0.75rem' }}>
+        <div className="flex gap-4">
           <button type="button" onClick={() => navigate(`/animales/${id}`, { replace: true })} className="btn-secondary flex-1 justify-center">
             Cancelar
           </button>
-          <button type="submit" disabled={guardando} className="btn-primary flex-1 justify-center disabled:opacity-60">
+          <button type="submit" form="form-editar-animal" disabled={guardando} className="btn-primary flex-1 justify-center disabled:opacity-60">
             {guardando ? 'Guardando...' : 'Guardar cambios'}
           </button>
         </div>
+      </div>
 
-      </form>
     </div>
   );
 }

@@ -171,10 +171,12 @@ export default function EstablecimientoModal({ onClose, requerido = false }) {
                 return (
                   <div
                     key={est.id}
+                    onClick={() => { if (!activo && confirmEliminar !== est.id && confirmSalir !== est.id) handleSeleccionar(est); }}
                     className="rounded-xl p-4"
                     style={{
                       border: activo ? '2px solid var(--verde-medio)' : '2px solid #E5E7EB',
                       backgroundColor: activo ? '#F0FDF4' : 'white',
+                      cursor: (!activo && confirmEliminar !== est.id && confirmSalir !== est.id) ? 'pointer' : 'default',
                     }}
                   >
                     <div className="flex items-center gap-3">
@@ -187,14 +189,14 @@ export default function EstablecimientoModal({ onClose, requerido = false }) {
                         {(confirmEliminar === est.id || confirmSalir === est.id) ? (
                           <>
                             <button
-                              onClick={() => confirmSalir === est.id ? handleSalir(est.id) : handleEliminar(est.id)}
+                              onClick={(e) => { e.stopPropagation(); confirmSalir === est.id ? handleSalir(est.id) : handleEliminar(est.id); }}
                               className="text-sm px-5 py-3 rounded-xl font-semibold"
                               style={{ backgroundColor: '#FEE2E2', color: '#EF4444' }}
                             >
                               Confirmar
                             </button>
                             <button
-                              onClick={() => { setConfirmEliminar(null); setConfirmSalir(null); }}
+                              onClick={(e) => { e.stopPropagation(); setConfirmEliminar(null); setConfirmSalir(null); }}
                               className="text-sm px-5 py-3 rounded-xl font-semibold"
                               style={{ backgroundColor: '#F3F4F6', color: '#6B7280' }}
                             >
@@ -203,19 +205,9 @@ export default function EstablecimientoModal({ onClose, requerido = false }) {
                           </>
                         ) : (
                           <>
-                            <button
-                              onClick={() => handleSeleccionar(est)}
-                              className="text-sm px-5 py-3 rounded-xl font-semibold transition-colors"
-                              style={{
-                                backgroundColor: activo ? 'var(--verde-medio)' : 'var(--verde-oscuro)',
-                                color: 'white',
-                              }}
-                            >
-                              {activo ? '✓ Activo' : 'Seleccionar'}
-                            </button>
                             {est.esInvitado ? (
                               <button
-                                onClick={() => setConfirmSalir(est.id)}
+                                onClick={(e) => { e.stopPropagation(); setConfirmSalir(est.id); }}
                                 className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors hover:bg-red-50"
                                 style={{ color: '#D1D5DB' }}
                                 title="Salir del establecimiento"
@@ -224,7 +216,7 @@ export default function EstablecimientoModal({ onClose, requerido = false }) {
                               </button>
                             ) : esProductor && (
                               <button
-                                onClick={() => setConfirmEliminar(est.id)}
+                                onClick={(e) => { e.stopPropagation(); setConfirmEliminar(est.id); }}
                                 className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors hover:bg-red-50"
                                 style={{ color: '#D1D5DB' }}
                                 title="Eliminar"
@@ -245,7 +237,7 @@ export default function EstablecimientoModal({ onClose, requerido = false }) {
               <button
                 onClick={() => { setModo('nuevo'); setError(''); }}
                 className="w-full py-3 rounded-xl font-semibold border-2 border-dashed transition-colors hover:bg-gray-50"
-                style={{ borderColor: '#D1D5DB', color: '#6B7280' }}
+                style={{ borderColor: '#D1D5DB', color: '#6B7280', marginTop: '0.75rem' }}
               >
                 + Agregar establecimiento
               </button>

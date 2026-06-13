@@ -78,25 +78,27 @@ export default function Historial() {
   if (cargando) return <LoadingSpinner texto="Cargando sesiones..." />;
 
   return (
-    <div className="flex flex-col w-full" style={{ gap: '1.75rem' }}>
+    <div className="flex flex-col flex-1" style={{ minHeight: 0, overflow: 'hidden' }}>
 
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold" style={{ color: 'var(--verde-oscuro)' }}>Sesiones</h1>
-        <p className="mt-1 text-sm" style={{ color: '#6B7280' }}>{filtradas.length} sesiones registradas</p>
+      {/* Header + Búsqueda (fijo) */}
+      <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '0.75rem', paddingBottom: '0.75rem' }}>
+        <div>
+          <h1 className="text-3xl font-bold" style={{ color: 'var(--verde-oscuro)' }}>Sesiones</h1>
+          <p className="mt-1 text-sm" style={{ color: '#6B7280' }}>{filtradas.length} sesiones registradas</p>
+        </div>
+
+        <input
+          type="text"
+          placeholder="Buscar por fecha o trabajo..."
+          value={busqueda}
+          onChange={e => setBusqueda(e.target.value)}
+          className="w-full rounded-2xl border bg-white"
+          style={{ borderColor: '#D1D5DB', padding: '0.875rem 1.25rem', fontSize: '1rem' }}
+        />
       </div>
 
-      {/* Búsqueda */}
-      <input
-        type="text"
-        placeholder="Buscar por fecha o trabajo..."
-        value={busqueda}
-        onChange={e => setBusqueda(e.target.value)}
-        className="w-full rounded-2xl border bg-white"
-        style={{ borderColor: '#D1D5DB', padding: '0.875rem 1.25rem', fontSize: '1rem' }}
-      />
-
-      {/* Lista */}
+      {/* Lista (scrolleable) */}
+      <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', paddingBottom: '0.5rem' }}>
       {filtradas.length === 0 ? (
         <div className="text-center py-24">
           <p className="text-lg font-semibold" style={{ color: '#374151' }}>Sin resultados</p>
@@ -106,93 +108,89 @@ export default function Historial() {
           {filtradas.map(v => (
             <div
               key={v.id}
-              className="bg-white rounded-2xl flex items-center gap-4"
-              style={{ border: '1.5px solid #E5E7EB', padding: '1.25rem 1.5rem' }}
+              className="bg-white rounded-2xl flex flex-col"
+              style={{ border: '1.5px solid #E5E7EB', padding: '1rem 1.25rem', gap: '0.625rem' }}
             >
-              {/* Fecha y equipo */}
-              <div className="flex-shrink-0" style={{ minWidth: '8rem' }}>
-                <p className="font-bold text-base" style={{ color: 'var(--verde-oscuro)' }}>
-                  {formatFecha(v.fecha)}
-                </p>
-                <p className="text-xs mt-0.5" style={{ color: '#9CA3AF' }}>
-                  {v.animalesAtendidos.length} animal{v.animalesAtendidos.length !== 1 ? 'es' : ''}
-                </p>
-                <p className="text-xs mt-0.5 truncate" style={{ color: '#6B7280', maxWidth: '8rem' }}>
-                  {v.veterinario}
-                </p>
-                {v.anotador && (
-                  <p className="text-xs truncate" style={{ color: '#9CA3AF', maxWidth: '8rem' }}>
-                    {v.anotador}
+              {/* Fila 1: fecha/info + acciones */}
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="font-bold text-base" style={{ color: 'var(--verde-oscuro)' }}>
+                    {v.numId != null ? `#${v.numId} · ` : ''}{formatFecha(v.fecha)}
                   </p>
-                )}
+                  <p className="text-xs mt-0.5" style={{ color: '#9CA3AF' }}>
+                    {v.animalesAtendidos.length} animal{v.animalesAtendidos.length !== 1 ? 'es' : ''}
+                    {' · '}{v.veterinario}
+                    {v.anotador ? ` · ${v.anotador}` : ''}
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  {confirmando === v.id ? (
+                    <>
+                      <button
+                        onClick={() => eliminarSesion(v.id)}
+                        className="px-3 py-1.5 rounded-xl text-sm font-semibold"
+                        style={{ backgroundColor: '#FEE2E2', color: '#EF4444' }}
+                      >
+                        Confirmar
+                      </button>
+                      <button
+                        onClick={() => setConfirmando(null)}
+                        className="px-3 py-1.5 rounded-xl text-sm font-semibold"
+                        style={{ backgroundColor: '#F3F4F6', color: '#6B7280' }}
+                      >
+                        Cancelar
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        onClick={() => descargarMetricas(v)}
+                        className="flex items-center justify-center w-9 h-9 rounded-xl transition-colors hover:bg-green-50"
+                        style={{ border: '1.5px solid #E5E7EB', color: 'var(--verde-medio)' }}
+                        title="Descargar reporte"
+                      >
+                        <Download className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => setConfirmando(v.id)}
+                        className="flex items-center justify-center w-9 h-9 rounded-xl transition-colors hover:bg-red-50"
+                        style={{ border: '1.5px solid #E5E7EB', color: '#EF4444' }}
+                        title="Eliminar sesión"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </>
+                  )}
+                </div>
               </div>
 
-              {/* Trabajos */}
-              <div className="flex flex-wrap gap-2 flex-1">
+              {/* Fila 2: trabajos (ancho completo) */}
+              <div className="flex flex-wrap gap-1.5">
                 {v.trabajos.map(t => {
                   const col = TRABAJO_COLORES[t] || { bg: '#EBF7F1', text: '#1B4332' };
                   return (
                     <span
                       key={t}
-                      className="rounded-lg text-sm font-semibold"
-                      style={{ backgroundColor: col.bg, color: col.text, border: '1px solid #C8E6D8', padding: '0.25rem 0.75rem' }}
+                      className="rounded-lg text-xs font-semibold"
+                      style={{ backgroundColor: col.bg, color: col.text, border: '1px solid #C8E6D8', padding: '0.2rem 0.625rem' }}
                     >
                       {t}
                     </span>
                   );
                 })}
                 {v.metricas?.outliers?.length > 0 && (
-                  <span className="flex items-center gap-1 px-2 py-1 rounded-xl text-xs font-semibold"
-                    style={{ backgroundColor: '#FEF3C7', color: '#92400E' }}>
+                  <span className="flex items-center gap-1 rounded-xl text-xs font-semibold"
+                    style={{ backgroundColor: '#FEF3C7', color: '#92400E', padding: '0.2rem 0.5rem' }}>
                     <AlertTriangle className="w-3 h-3" /> {v.metricas.outliers.length} fuera de norma
                   </span>
-                )}
-              </div>
-
-              {/* Acciones */}
-              <div className="flex items-center gap-2 flex-shrink-0">
-                {confirmando === v.id ? (
-                  <>
-                    <button
-                      onClick={() => eliminarSesion(v.id)}
-                      className="px-3 py-2 rounded-xl text-sm font-semibold"
-                      style={{ backgroundColor: '#FEE2E2', color: '#EF4444' }}
-                    >
-                      Confirmar
-                    </button>
-                    <button
-                      onClick={() => setConfirmando(null)}
-                      className="px-3 py-2 rounded-xl text-sm font-semibold"
-                      style={{ backgroundColor: '#F3F4F6', color: '#6B7280' }}
-                    >
-                      Cancelar
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <button
-                      onClick={() => descargarMetricas(v)}
-                      className="flex items-center justify-center w-11 h-11 rounded-xl transition-colors hover:bg-green-50"
-                      style={{ border: '1.5px solid #E5E7EB', color: 'var(--verde-medio)' }}
-                      title="Descargar reporte"
-                    >
-                      <Download className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => setConfirmando(v.id)}
-                      className="flex items-center justify-center w-11 h-11 rounded-xl transition-colors hover:bg-red-50"
-                      style={{ border: '1.5px solid #E5E7EB', color: '#EF4444' }}
-                      title="Eliminar sesión"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </>
                 )}
               </div>
             </div>
           ))}
         </div>
       )}
+      </div>
     </div>
   );
 }

@@ -221,7 +221,7 @@ export function generarHTMLReporte({
   const secciones = [secPesaje, secTacto, secBoqueo, secVacunacion, secOutliers, secAnimales].filter(Boolean);
 
   return `<!DOCTYPE html><html><head><meta charset="utf-8">
-  <title>Reporte VetRural — ${fecha}</title>
+  <title>${establecimiento ? establecimiento.replace(/\s+/g,'_') : 'reporte'}_${new Date().toISOString().slice(0,10)}</title>
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
     body{font-family:Arial,sans-serif;color:#111;background:#fff}
@@ -245,6 +245,255 @@ export function generarHTMLReporte({
     <div style="font-size:56px;font-weight:900;color:#1B4332;line-height:1">${totalAnimales}</div>
     <p style="color:#555;font-size:14px;margin:4px 0 10px">${totalAnimales === 1 ? 'animal procesado' : 'animales procesados'}</p>
     <div>${badges}</div>
+  </div>
+
+  ${secciones.join(SEP)}
+
+  </div><script>window.onload=()=>window.print();</script></body></html>`;
+}
+
+// ── Nombre de archivo PDF normalizado ────────────────────────────────────────
+
+export function nombreArchivoPDF(establecimiento, fechaISO) {
+  const base = (establecimiento || 'reporte')
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-zA-Z0-9\s]/g, '').trim().replace(/\s+/g, '_').toLowerCase();
+  return `${base}_${fechaISO || new Date().toISOString().slice(0, 10)}.pdf`;
+}
+
+// ── Abrir HTML en ventana nueva con auto-print ────────────────────────────────
+
+export function abrirEImprimir(htmlContent) {
+  const blob = new Blob([htmlContent], { type: 'text/html' });
+  const url  = URL.createObjectURL(blob);
+  window.open(url, '_blank');
+  setTimeout(() => URL.revokeObjectURL(url), 15000);
+}
+
+// ── Compartir o abrir como PDF ────────────────────────────────────────────────
+
+export async function compartirPDF(htmlContent, nombreArchivo, titulo) {
+  const blob = new Blob([htmlContent], { type: 'text/html' });
+  if (navigator.share) {
+    const file = new File([blob], nombreArchivo, { type: 'application/pdf' });
+    const canFiles = navigator.canShare?.({ files: [file] });
+    try {
+      await navigator.share(canFiles ? { title: titulo, files: [file] } : { title: titulo, url: URL.createObjectURL(blob) });
+      return;
+    } catch (e) {
+      if (e.name === 'AbortError') return;
+    }
+  }
+  abrirEImprimir(htmlContent);
+}
+
+// ── Reporte de métricas del establecimiento (PDF) ────────────────────────────
+
+const VACUNAS_LABELS_M = {
+  Aftosa: 'Aftosa', Brucelosis: 'Brucelosis', Carbunco: 'Carbunco',
+  Clostridial: 'Clostridial', IBR: 'IBR', BVD: 'BVD',
+};
+const TACTO_LABELS_M = {
+  Preñada: 'Preñada', Perdonada: 'Perdonada', 'Frigorífico': 'Frigorífico',
+  Apta_Servicio: 'Apta servicio', No_Aplica: 'No aplica',
+};
+const TIPOS_ORDEN_M = ['Ternera','Vaquillona','Vaca','Ternero','Novillito','Novillo','Torito','Toro'];
+const DIENTES_M = { Dos: '2 dientes · 1.5–2 a.', Cuatro: '4 dientes · 2.5–3 a.', Seis: '6 dientes · 3.5–4 a.', Ocho: '8 dientes · >4.5 a.' };
+
+function fila(label, value) {
+  return `<div style="display:flex;justify-content:space-between;font-size:13px;padding:5px 0;border-bottom:1px solid #f0f0f0">
+    <span style="color:#555">${label}</span><strong style="color:#1B4332">${value}</strong>
+  </div>`;
+}
+
+function kpi(label, value, sub) {
+  return `<div style="background:#f8fffe;border:1px solid #C8E6D8;border-radius:10px;padding:12px;text-align:center">
+    <div style="font-size:26px;font-weight:900;color:#1B4332;line-height:1.1">${value}</div>
+    <div style="font-size:11px;color:#2E7D57;font-weight:600;margin-top:2px">${label}</div>
+    ${sub ? `<div style="font-size:10px;color:#9CA3AF;margin-top:1px">${sub}</div>` : ''}
+  </div>`;
+}
+
+export function generarHTMLMetricas({ seleccionado, metricas, sesion, sexo, lote }) {
+  const nombreEst   = seleccionado?.nombre || 'Establecimiento';
+  const fechaHoy    = new Date().toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' });
+  const filtrosText = [sexo !== 'Todos' ? `Sexo: ${sexo}` : '', lote !== 'Todos' ? `Lote: ${lote}` : ''].filter(Boolean).join(' · ') || 'Sin filtros';
+
+  const H2 = 'color:#1B4332;font-size:15px;font-weight:bold;border-left:3px solid #2E7D57;padding-left:8px;margin:0 0 12px';
+  const SEP = '<hr style="border:none;border-top:1px solid #e5e7eb;margin:20px 0"/>';
+  const m   = metricas || {};
+
+  // ── Sesiones ────────────────────────────────────────────────────────────────
+  const secSesiones = sesion && sesion.totalSesiones > 0 ? `
+    <section>
+      <h2 style="${H2}">Actividad de sesiones</h2>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px">
+        ${kpi('Sesiones', sesion.totalSesiones)}
+        ${kpi('Animales atendidos', sesion.totalAtendidos, 'total acumulado')}
+        ${sesion.adpvPromedio !== null && sesion.adpvPromedio !== undefined ? kpi('ADPV promedio', `${sesion.adpvPromedio} kg/d`, 'entre sesiones con pesaje') : ''}
+      </div>
+      ${sesion.trabajosChart?.length > 0 ? `
+        <div style="background:#f8f8f8;border-radius:8px;padding:12px">
+          <div style="font-size:12px;font-weight:bold;color:#1B4332;margin-bottom:8px">Trabajos más realizados</div>
+          ${sesion.trabajosChart.map(t => `<div style="margin:5px 0">
+            <div style="display:flex;justify-content:space-between;font-size:12px">
+              <span>${t.trabajo}</span><strong>${t.cantidad} sesión${t.cantidad !== 1 ? 'es' : ''}</strong>
+            </div>
+            ${barraCSS(sesion.totalSesiones > 0 ? (t.cantidad / sesion.totalSesiones) * 100 : 0)}
+          </div>`).join('')}
+        </div>` : ''}
+    </section>` : '';
+
+  // ── Rodeo ───────────────────────────────────────────────────────────────────
+  const secRodeo = m.totalBovinos > 0 ? `
+    <section>
+      <h2 style="${H2}">Estado del rodeo · ${filtrosText}</h2>
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:14px">
+        ${kpi('Total animales', m.totalBovinos, `${m.hembras} hembras · ${m.machos} machos`)}
+        ${kpi('Peso promedio', m.pesoPromedio ? `${m.pesoPromedio} kg` : '—', m.conPeso > 0 ? `${m.conPeso} pesados` : 'Sin pesajes')}
+        ${kpi('Edad promedio', m.edadPromedioMeses != null ? (Math.floor(m.edadPromedioMeses/12) + ' a. ' + (m.edadPromedioMeses%12) + ' m.') : '—')}
+        ${m.totalTactadas > 0 ? kpi('Hembras tactadas', m.totalTactadas, `de ${m.hembras} hembras`) : ''}
+      </div>
+    </section>` : '';
+
+  // ── Preñez ──────────────────────────────────────────────────────────────────
+  const secPrenez = m.hembras > 0 && m.totalTactadas > 0 ? `
+    <section>
+      <h2 style="${H2}">Preñez</h2>
+      <div style="background:#f0f7f3;border-radius:10px;padding:16px;margin-bottom:12px;text-align:center">
+        <div style="font-size:42px;font-weight:900;color:#1B4332">${m.porcentajePrenez}%</div>
+        <div style="font-size:12px;color:#555;margin-top:2px">Preñadas sobre tactadas · ${m.prenadas}/${m.totalTactadas}</div>
+        ${barraCSS(m.porcentajePrenez)}
+      </div>
+      <div style="background:#f8f8f8;border-radius:8px;padding:12px">
+        ${fila('Preñadas', `${m.prenadas} (${m.porcentajePrenez}%)`)}
+        ${fila('No preñadas', `${m.totalTactadas - m.prenadas} (${100 - m.porcentajePrenez}%)`)}
+        ${fila('Total hembras', m.hembras)}
+      </div>
+    </section>` : '';
+
+  // ── Composición ─────────────────────────────────────────────────────────────
+  let secComposicion = '';
+  if (m.distribucionTipo && Object.keys(m.distribucionTipo).length > 0) {
+    const total = Object.values(m.distribucionTipo).reduce((a, b) => a + b, 0);
+    const entradas = TIPOS_ORDEN_M.filter(t => m.distribucionTipo[t]).concat(
+      Object.keys(m.distribucionTipo).filter(t => !TIPOS_ORDEN_M.includes(t))
+    );
+    secComposicion = `<section>
+      <h2 style="${H2}">Composición del rodeo</h2>
+      <div style="background:#f8f8f8;border-radius:8px;padding:12px">
+        ${entradas.map(t => {
+          const label = (!t || t.includes('_')) ? 'No especificado' : t;
+          return `<div style="margin:6px 0">
+            <div style="display:flex;justify-content:space-between;font-size:12px">
+              <span>${label}</span><span><strong>${m.distribucionTipo[t]}</strong> (${Math.round(m.distribucionTipo[t]/total*100)}%)</span>
+            </div>
+            ${barraCSS((m.distribucionTipo[t]/total)*100)}
+          </div>`;
+        }).join('')}
+      </div>
+    </section>`;
+  }
+
+  // ── Etaria ──────────────────────────────────────────────────────────────────
+  let secEtaria = '';
+  if (m.distribucionDientes && Object.keys(m.distribucionDientes).length > 0) {
+    const total = Object.values(m.distribucionDientes).reduce((a, b) => a + b, 0);
+    secEtaria = `<section>
+      <h2 style="${H2}">Distribución etaria por boqueo</h2>
+      <p style="font-size:12px;color:#9CA3AF;margin-bottom:10px">Animales con boqueo registrado · total: ${total}</p>
+      <div style="background:#f8f8f8;border-radius:8px;padding:12px">
+        ${['Dos','Cuatro','Seis','Ocho'].filter(k => m.distribucionDientes[k]).map(k => `<div style="margin:6px 0">
+          <div style="display:flex;justify-content:space-between;font-size:12px">
+            <span>${DIENTES_M[k] || k}</span><span><strong>${m.distribucionDientes[k]}</strong> (${Math.round(m.distribucionDientes[k]/total*100)}%)</span>
+          </div>
+          ${barraCSS((m.distribucionDientes[k]/total)*100)}
+        </div>`).join('')}
+      </div>
+    </section>`;
+  }
+
+  // ── Tacto ───────────────────────────────────────────────────────────────────
+  let secTacto = '';
+  if (m.distribucionTacto && Object.keys(m.distribucionTacto).length > 0) {
+    const total = Object.values(m.distribucionTacto).reduce((a, b) => a + b, 0);
+    secTacto = `<section>
+      <h2 style="${H2}">Situación reproductiva</h2>
+      <p style="font-size:12px;color:#9CA3AF;margin-bottom:10px">Hembras con tacto registrado · total: ${total}</p>
+      <div style="background:#f8f8f8;border-radius:8px;padding:12px">
+        ${Object.entries(m.distribucionTacto).map(([k, v]) => `<div style="margin:6px 0">
+          <div style="display:flex;justify-content:space-between;font-size:12px">
+            <span>${TACTO_LABELS_M[k] || k.replace(/_/g,' ')}</span><span><strong>${v}</strong> (${Math.round(v/total*100)}%)</span>
+          </div>
+          ${barraCSS((v/total)*100)}
+        </div>`).join('')}
+      </div>
+    </section>`;
+  }
+
+  // ── Vacunación ──────────────────────────────────────────────────────────────
+  let secVacunacion = '';
+  if (m.vacunados && m.totalBovinos > 0) {
+    secVacunacion = `<section>
+      <h2 style="${H2}">Cobertura de vacunación vigente</h2>
+      <p style="font-size:12px;color:#9CA3AF;margin-bottom:10px">Dentro del intervalo recomendado (Aftosa: 6 m · Resto: 12 m)</p>
+      <div style="background:#f8f8f8;border-radius:8px;padding:12px">
+        ${Object.entries(VACUNAS_LABELS_M).map(([key, label]) => {
+          const vigente = m.vacunadosVigentes?.[key] ?? 0;
+          const total   = m.vacunados?.[key] ?? 0;
+          const pctV    = m.totalBovinos > 0 ? Math.round(vigente / m.totalBovinos * 100) : 0;
+          const pctT    = m.totalBovinos > 0 ? Math.round(total   / m.totalBovinos * 100) : 0;
+          return `<div style="margin:8px 0">
+            <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px">
+              <span style="font-weight:bold">${label}</span>
+              <span><strong style="color:#2E7D57">${vigente} vigente${vigente!==1?'s':''} (${pctV}%)</strong> · ${total} total (${pctT}%)</span>
+            </div>
+            <div style="background:#d4edda;border-radius:4px;height:10px;overflow:hidden">
+              <div style="background:#2E7D57;height:100%;width:${pctV}%;border-radius:4px"></div>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+    </section>`;
+  }
+
+  // ── Alertas ─────────────────────────────────────────────────────────────────
+  let secAlertas = '';
+  if (m.alertas && m.alertas.length > 0) {
+    secAlertas = `<section>
+      <h2 style="color:#c0392b;font-size:15px;font-weight:bold;border-left:3px solid #EF4444;padding-left:8px;margin-bottom:12px">
+        Alertas del rodeo (${m.alertas.length})
+      </h2>
+      <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:14px">
+        ${m.alertas.map(a => `<div style="padding:5px 0;border-bottom:1px solid #fecaca">
+          <span style="font-family:monospace;font-size:12px;background:#fee2e2;color:#991B1B;padding:1px 6px;border-radius:4px">${a.caravana}</span>
+          <span style="font-size:12px;margin-left:6px;color:#374151">${a.motivo}</span>
+        </div>`).join('')}
+      </div>
+    </section>`;
+  }
+
+  const secciones = [secSesiones, secRodeo, secPrenez, secComposicion, secEtaria, secTacto, secVacunacion, secAlertas].filter(Boolean);
+
+  return `<!DOCTYPE html><html><head><meta charset="utf-8">
+  <title>${nombreEst.replace(/\s+/g,'_')}_${new Date().toISOString().slice(0,10)}</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:Arial,sans-serif;color:#111;background:#fff}
+    .page{max-width:740px;margin:36px auto;padding:24px}
+    section{margin:20px 0}
+    @media print{body{margin:0}.page{margin:0;padding:16px}section{page-break-inside:avoid}}
+  </style>
+  </head><body><div class="page">
+
+  <div style="background:#f0f7f3;border-radius:10px;padding:16px 20px;margin-bottom:20px">
+    <div style="font-size:20px;font-weight:900;color:#1B4332;margin-bottom:8px">VetRural — Métricas del establecimiento</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 24px">
+      <div><span style="font-size:11px;color:#666">Establecimiento</span><div style="font-weight:bold;font-size:13px">${nombreEst}</div></div>
+      <div><span style="font-size:11px;color:#666">Fecha</span><div style="font-weight:bold;font-size:13px">${fechaHoy}</div></div>
+      <div><span style="font-size:11px;color:#666">Filtros</span><div style="font-size:13px">${filtrosText}</div></div>
+      <div><span style="font-size:11px;color:#666">Total animales</span><div style="font-weight:bold;font-size:13px">${m.totalBovinos ?? '—'}</div></div>
+    </div>
   </div>
 
   ${secciones.join(SEP)}

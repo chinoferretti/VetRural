@@ -10,7 +10,7 @@ const ROLES = [
 ];
 
 export default function Registro() {
-  const { usuario, registrar } = useAuth();
+  const { usuario } = useAuth();
   const navigate = useNavigate();
   const [form, setForm] = useState({ nombre: '', apellido: '', email: '', password: '', confirmar: '', rol: 'veterinario' });
   const [error, setError] = useState('');
@@ -47,11 +47,6 @@ export default function Registro() {
         contrasena: form.password,
         tipo:       tipoMap[form.rol],
       });
-
-      // Guardar en localStorage con el ID real del backend para que el fallback de login funcione
-      try {
-        registrar({ nombre: form.nombre, apellido: form.apellido, email: form.email, password: form.password, rol: form.rol, id: usuarioCreado?.idUsuario });
-      } catch { /* ignorar si el email ya existe en localStorage */ }
 
       navigate('/login', { replace: true, state: { registrado: true } });
     } catch (err) {

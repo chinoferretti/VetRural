@@ -33,19 +33,7 @@ export function EstablecimientoProvider({ children }) {
     setCargando(true);
     getEstablecimientosDelUsuario(usuario.id)
       .then(data => {
-        const locales = cargarLocal(usuario.id);
-        const backendIds = new Set(data.map(e => String(e.id)));
-        const fromBackend = data.map(e => {
-          const local = locales.find(l => String(l.id) === String(e.id));
-          return {
-            ...e,
-            ubicacion:  local?.ubicacion  ?? '',
-            esInvitado: local?.esInvitado ?? false,
-          };
-        });
-        // Preservar establecimientos aceptados localmente que el backend no conoce
-        const soloLocales = locales.filter(l => !backendIds.has(String(l.id)) && l.esInvitado);
-        const lista = [...fromBackend, ...soloLocales];
+        const lista = data.map(e => ({ ...e, ubicacion: '', esInvitado: false }));
         setLista(lista);
         persistirLocal(usuario.id, lista);
       })
@@ -59,7 +47,12 @@ export function EstablecimientoProvider({ children }) {
 
   const crear = async ({ nombre, ubicacion }) => {
     const nuevo = await crearEstablecimiento(nombre);
-    await asociarUsuario(nuevo.id, usuario.id);
+    try {
+      await asociarUsuario(nuevo.id, usuario.id);
+    } catch {
+      // El usuario puede no existir en el backend (ej: DB recién reiniciada).
+      // La asociación falla silenciosamente; el establecimiento se persiste localmente igual.
+    }
     const conUbicacion = { ...nuevo, ubicacion: ubicacion || '', esInvitado: false };
     const nueva = [...lista, conUbicacion];
     setLista(nueva);

@@ -1,12 +1,13 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LabelList,
 } from 'recharts';
 import { useEstablecimiento } from '../context/EstablecimientoContext';
 import { useAuth } from '../context/AuthContext';
 import { getMetricasEstablecimiento } from '../api/establecimientosApi';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { PawPrint, Scale, Clock, Heart, CircleSlash, Users, Stethoscope, CalendarDays, Activity, AlertTriangle, Download, Share2, CheckCircle2 } from 'lucide-react';
+import { generarHTMLMetricas, abrirEImprimir, compartirPDF, nombreArchivoPDF } from '../utils/reporteUtils';
 
 const SEXOS = ['Todos', 'Hembra', 'Macho'];
 
@@ -134,7 +135,6 @@ function AlertasAgrupadas({ alertas }) {
                   style={{ cursor: esSolo ? 'default' : 'pointer' }}
                 >
                   <div className="flex items-center gap-2 min-w-0">
-                    <AlertTriangle className="w-4 h-4 flex-shrink-0" style={{ color: '#D97706' }} />
                     <span className="text-sm font-semibold" style={{ color: '#374151' }}>
                       {esSolo
                         ? `N° ${caravanas[0]}: ${motivo}`
@@ -167,28 +167,6 @@ function AlertasAgrupadas({ alertas }) {
 
 // ── Componente principal ───────────────────────────────────────────────────────
 
-function descargarPDF(nombreEstablecimiento) {
-  const titulo = document.title;
-  document.title = `metricas_${(nombreEstablecimiento || 'rodeo').replace(/\s+/g, '_').toLowerCase()}`;
-  window.print();
-  setTimeout(() => { document.title = titulo; }, 500);
-}
-
-async function compartirMetricas(seleccionado, metricas) {
-  const nombre = seleccionado?.nombre ?? 'Establecimiento';
-  const texto = metricas
-    ? `Métricas de ${nombre}\nTotal: ${metricas.totalBovinos} animales\nPeso promedio: ${metricas.pesoPromedio ? metricas.pesoPromedio + ' kg' : '—'}\nPreñez: ${metricas.porcentajePrenez ?? '—'}%`
-    : `Métricas de ${nombre}`;
-  if (navigator.share) {
-    try {
-      await navigator.share({ title: `Métricas · ${nombre}`, text: texto });
-    } catch { /* usuario canceló */ }
-  } else {
-    await navigator.clipboard.writeText(texto);
-    alert('Resumen copiado al portapapeles');
-  }
-}
-
 export default function Metricas() {
   const { seleccionado } = useEstablecimiento();
   const [sexo, setSexo]       = useState('Todos');
@@ -198,6 +176,17 @@ export default function Metricas() {
   const [error,    setError]    = useState('');
 
   const sesion = useSesionStats();
+  const fechaISO = useMemo(() => new Date().toISOString().slice(0, 10), []);
+
+  const handleDescargarPDF = useCallback(() => {
+    abrirEImprimir(generarHTMLMetricas({ seleccionado, metricas, sesion, sexo, lote }));
+  }, [seleccionado, metricas, sesion, sexo, lote]);
+
+  const handleCompartir = useCallback(async () => {
+    const html = generarHTMLMetricas({ seleccionado, metricas, sesion, sexo, lote });
+    const nombre = nombreArchivoPDF(seleccionado?.nombre, fechaISO);
+    await compartirPDF(html, nombre, `Métricas · ${seleccionado?.nombre ?? 'VetRural'}`);
+  }, [seleccionado, metricas, sesion, sexo, lote, fechaISO]);
 
   useEffect(() => {
     if (!seleccionado) return;
@@ -216,42 +205,47 @@ export default function Metricas() {
     ? Object.entries(VACUNAS_LABELS).map(([key, label]) => {
         const vigente = metricas.vacunadosVigentes?.[key] ?? 0;
         const alguna  = metricas.vacunados?.[key] ?? 0;
-        return { vacuna: label, vigente, vencida: Math.max(0, alguna - vigente) };
+        const vencida = Math.max(0, alguna - vigente);
+        const pctVigente = metricas.totalBovinos > 0 ? Math.round(vigente / metricas.totalBovinos * 100) : 0;
+        return { vacuna: label, vigente, vencida, pctVigente };
       })
     : [];
 
   return (
-    <div className="flex flex-col w-full" style={{ gap: '2.5rem' }}>
+    <div className="flex flex-col flex-1" style={{ minHeight: 0, overflow: 'hidden' }}>
 
-      {/* Header */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold" style={{ color: 'var(--verde-oscuro)' }}>Métricas</h1>
-          <p className="mt-1 text-sm" style={{ color: '#6B7280' }}>
-            {seleccionado ? seleccionado.nombre : 'Seleccioná un establecimiento'}
-          </p>
-        </div>
-        <div className="flex gap-2 flex-shrink-0 mt-1">
-          <button
-            onClick={() => descargarPDF(seleccionado?.nombre)}
-            className="flex items-center gap-1.5 rounded-xl font-semibold text-sm transition-colors hover:bg-gray-100"
-            style={{ border: '1.5px solid #E5E7EB', padding: '0.5rem 0.875rem', color: '#374151', backgroundColor: 'white' }}
-            title="Descargar como PDF"
-          >
-            <Download className="w-4 h-4" />
-            PDF
-          </button>
-          <button
-            onClick={() => compartirMetricas(seleccionado, metricas)}
-            className="flex items-center gap-1.5 rounded-xl font-semibold text-sm transition-colors hover:bg-green-50"
-            style={{ border: '1.5px solid #86EFAC', padding: '0.5rem 0.875rem', color: 'var(--verde-oscuro)', backgroundColor: 'white' }}
-            title="Compartir métricas"
-          >
-            <Share2 className="w-4 h-4" />
-            Compartir
-          </button>
+      {/* Header fijo */}
+      <div style={{ flexShrink: 0, paddingBottom: '0.75rem' }}>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h1 className="text-3xl font-bold" style={{ color: 'var(--verde-oscuro)' }}>Métricas</h1>
+          </div>
+          <div className="flex gap-2 mt-1">
+            <button
+              onClick={handleDescargarPDF}
+              className="flex items-center gap-1.5 rounded-xl font-semibold transition-colors hover:bg-gray-100"
+              style={{ border: '1.5px solid #E5E7EB', padding: '0.45rem 0.75rem', fontSize: '0.8rem', color: '#374151', backgroundColor: 'white', whiteSpace: 'nowrap' }}
+              title="Descargar como PDF"
+            >
+              <Download className="w-4 h-4" />
+              PDF
+            </button>
+            <button
+              onClick={handleCompartir}
+              className="flex items-center gap-1.5 rounded-xl font-semibold transition-colors hover:bg-green-50"
+              style={{ border: '1.5px solid #86EFAC', padding: '0.45rem 0.75rem', fontSize: '0.8rem', color: 'var(--verde-oscuro)', backgroundColor: 'white', whiteSpace: 'nowrap' }}
+              title="Compartir métricas"
+            >
+              <Share2 className="w-4 h-4" />
+              Compartir
+            </button>
+          </div>
         </div>
       </div>
+
+      {/* Contenido scrolleable */}
+      <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', paddingBottom: '1rem' }}>
+      <div className="flex flex-col" style={{ gap: '2.5rem' }}>
 
       {/* ── Sección 1: Actividad de sesiones (desde localStorage) ── */}
       <section className="flex flex-col" style={{ gap: '1rem' }}>
@@ -300,13 +294,15 @@ export default function Metricas() {
               <div className="card" style={{ padding: '1.75rem' }}>
                 <h3 className="font-bold mb-5" style={{ color: 'var(--verde-oscuro)' }}>Trabajos más realizados</h3>
                 <ResponsiveContainer width="100%" height={180}>
-                  <BarChart data={sesion.trabajosChart} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" />
-                    <XAxis dataKey="trabajo" tick={{ fontSize: 13 }} />
-                    <YAxis allowDecimals={false} tick={{ fontSize: 13 }} />
+                  <BarChart data={sesion.trabajosChart} margin={{ top: 24, right: 8, bottom: 4, left: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" vertical={false} />
+                    <XAxis dataKey="trabajo" tick={{ fontSize: 13 }} axisLine={false} tickLine={false} />
+                    <YAxis allowDecimals={false} tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
                     <Tooltip formatter={(v) => [`${v}`, 'Sesiones']}
                       contentStyle={{ borderRadius: '0.75rem', border: '1px solid #E5E7EB' }} />
-                    <Bar dataKey="cantidad" fill="var(--verde-oscuro)" radius={[8, 8, 0, 0]} />
+                    <Bar dataKey="cantidad" fill="var(--verde-oscuro)" radius={[8, 8, 0, 0]}>
+                      <LabelList dataKey="cantidad" position="top" style={{ fontSize: 12, fontWeight: 700, fill: 'var(--verde-oscuro)' }} />
+                    </Bar>
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -437,18 +433,22 @@ export default function Metricas() {
                     .map(t => ({ tipo: t, cantidad: metricas.distribucionTipo[t] }))
                     .concat(Object.entries(metricas.distribucionTipo)
                       .filter(([t]) => !TIPOS_ORDEN.includes(t))
-                      .map(([t, c]) => ({ tipo: t, cantidad: c })));
+                      .map(([t, c]) => ({ tipo: (!t || t.includes('_')) ? 'No especificado' : t, cantidad: c })));
                   return (
                     <div className="card" style={{ padding: '1.75rem' }}>
                       <h3 className="font-bold text-lg mb-5" style={{ color: 'var(--verde-oscuro)' }}>Composición del rodeo</h3>
                       <ResponsiveContainer width="100%" height={Math.max(160, entradas.length * 44)}>
-                        <BarChart data={entradas} layout="vertical" margin={{ left: 8, right: 48, top: 0, bottom: 0 }}>
-                          <XAxis type="number" allowDecimals={false} tick={{ fontSize: 12 }} />
-                          <YAxis type="category" dataKey="tipo" tick={{ fontSize: 12 }} width={90} />
+                        <BarChart data={entradas} layout="vertical" margin={{ left: 8, right: 70, top: 4, bottom: 4 }}>
+                          <XAxis type="number" allowDecimals={false} tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
+                          <YAxis type="category" dataKey="tipo" tick={{ fontSize: 12 }} width={78} axisLine={false} tickLine={false} />
                           <Tooltip
                             formatter={(v) => [`${v} (${total > 0 ? Math.round(v / total * 100) : 0}%)`, 'Animales']}
                             contentStyle={{ borderRadius: '0.75rem', border: '1px solid #E5E7EB' }} />
-                          <Bar dataKey="cantidad" fill="var(--verde-medio)" radius={[0, 6, 6, 0]} />
+                          <Bar dataKey="cantidad" fill="var(--verde-medio)" radius={[0, 6, 6, 0]}>
+                            <LabelList dataKey="cantidad" position="right"
+                              formatter={(v) => `${v} (${total > 0 ? Math.round(v / total * 100) : 0}%)`}
+                              style={{ fontSize: 11, fill: '#374151' }} />
+                          </Bar>
                         </BarChart>
                       </ResponsiveContainer>
                     </div>
@@ -468,13 +468,17 @@ export default function Metricas() {
                         Animales con boqueo registrado · total: {total}
                       </p>
                       <ResponsiveContainer width="100%" height={Math.max(160, data.length * 48)}>
-                        <BarChart data={data} layout="vertical" margin={{ left: 8, right: 48, top: 0, bottom: 0 }}>
-                          <XAxis type="number" allowDecimals={false} tick={{ fontSize: 12 }} />
-                          <YAxis type="category" dataKey="nombre" tick={{ fontSize: 11 }} width={140} />
+                        <BarChart data={data} layout="vertical" margin={{ left: 8, right: 70, top: 4, bottom: 4 }}>
+                          <XAxis type="number" allowDecimals={false} tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
+                          <YAxis type="category" dataKey="nombre" tick={{ fontSize: 11 }} width={100} axisLine={false} tickLine={false} />
                           <Tooltip
                             formatter={(v) => [`${v} (${total > 0 ? Math.round(v / total * 100) : 0}%)`, 'Animales']}
                             contentStyle={{ borderRadius: '0.75rem', border: '1px solid #E5E7EB' }} />
-                          <Bar dataKey="cantidad" fill="var(--verde-claro)" radius={[0, 6, 6, 0]} />
+                          <Bar dataKey="cantidad" fill="var(--verde-claro)" radius={[0, 6, 6, 0]}>
+                            <LabelList dataKey="cantidad" position="right"
+                              formatter={(v) => `${v} (${total > 0 ? Math.round(v / total * 100) : 0}%)`}
+                              style={{ fontSize: 11, fill: '#374151' }} />
+                          </Bar>
                         </BarChart>
                       </ResponsiveContainer>
                     </div>
@@ -495,13 +499,17 @@ export default function Metricas() {
                         Hembras con tacto registrado · total: {total}
                       </p>
                       <ResponsiveContainer width="100%" height={Math.max(160, data.length * 44)}>
-                        <BarChart data={data} layout="vertical" margin={{ left: 8, right: 48, top: 0, bottom: 0 }}>
-                          <XAxis type="number" allowDecimals={false} tick={{ fontSize: 12 }} />
-                          <YAxis type="category" dataKey="nombre" tick={{ fontSize: 12 }} width={100} />
+                        <BarChart data={data} layout="vertical" margin={{ left: 8, right: 70, top: 4, bottom: 4 }}>
+                          <XAxis type="number" allowDecimals={false} tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
+                          <YAxis type="category" dataKey="nombre" tick={{ fontSize: 12 }} width={80} axisLine={false} tickLine={false} />
                           <Tooltip
                             formatter={(v) => [`${v} (${total > 0 ? Math.round(v / total * 100) : 0}%)`, 'Hembras']}
                             contentStyle={{ borderRadius: '0.75rem', border: '1px solid #E5E7EB' }} />
-                          <Bar dataKey="cantidad" fill="var(--verde-medio)" radius={[0, 6, 6, 0]} />
+                          <Bar dataKey="cantidad" fill="var(--verde-medio)" radius={[0, 6, 6, 0]}>
+                            <LabelList dataKey="cantidad" position="right"
+                              formatter={(v) => `${v} (${total > 0 ? Math.round(v / total * 100) : 0}%)`}
+                              style={{ fontSize: 11, fill: '#374151' }} />
+                          </Bar>
                         </BarChart>
                       </ResponsiveContainer>
                     </div>
@@ -516,10 +524,10 @@ export default function Metricas() {
                       Vacunados dentro del intervalo recomendado · Aftosa: 6 meses · Resto: 12 meses
                     </p>
                     <ResponsiveContainer width="100%" height={240}>
-                      <BarChart data={vacunacionChart} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" />
-                        <XAxis dataKey="vacuna" tick={{ fontSize: 12 }} />
-                        <YAxis allowDecimals={false} tick={{ fontSize: 12 }} domain={[0, metricas.totalBovinos]} />
+                      <BarChart data={vacunacionChart} margin={{ top: 24, right: 8, bottom: 4, left: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" vertical={false} />
+                        <XAxis dataKey="vacuna" tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
+                        <YAxis allowDecimals={false} tick={{ fontSize: 12 }} domain={[0, metricas.totalBovinos]} axisLine={false} tickLine={false} />
                         <Tooltip
                           formatter={(v, name) => [
                             `${v} (${metricas.totalBovinos > 0 ? Math.round(v / metricas.totalBovinos * 100) : 0}%)`,
@@ -527,7 +535,11 @@ export default function Metricas() {
                           ]}
                           contentStyle={{ borderRadius: '0.75rem', border: '1px solid #E5E7EB' }} />
                         <Bar dataKey="vigente" stackId="a" fill="var(--verde-medio)" radius={[0, 0, 0, 0]} />
-                        <Bar dataKey="vencida" stackId="a" fill="#FCA5A5" radius={[8, 8, 0, 0]} />
+                        <Bar dataKey="vencida" stackId="a" fill="#FCA5A5" radius={[8, 8, 0, 0]}>
+                          <LabelList dataKey="pctVigente" position="top"
+                            formatter={(v) => `${v}%`}
+                            style={{ fontSize: 11, fontWeight: 700, fill: 'var(--verde-oscuro)' }} />
+                        </Bar>
                       </BarChart>
                     </ResponsiveContainer>
                     <div className="flex items-center gap-4 mt-3 text-xs" style={{ color: '#6B7280' }}>
@@ -545,6 +557,8 @@ export default function Metricas() {
         )}
       </section>
 
+      </div>
+      </div>
     </div>
   );
 }

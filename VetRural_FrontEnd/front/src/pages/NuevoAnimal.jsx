@@ -394,15 +394,17 @@ const handleSubmit = async (e) => {
   }
 
   return (
-    <div className="w-full flex flex-col" style={{ gap: '1.75rem' }}>
+    <div className="w-full flex flex-col flex-1" style={{ minHeight: 0, overflow: 'hidden' }}>
 
-      {/* Header */}
-      <div>
+      {/* Header fijo */}
+      <div style={{ flexShrink: 0 }}>
         <h1 className="text-3xl font-bold" style={{ color: 'var(--verde-oscuro)' }}>Nuevo animal</h1>
         <p className="mt-1" style={{ color: '#6B7280' }}>Los campos con <span style={{ color: '#EF4444' }}>*</span> son obligatorios</p>
       </div>
 
-      <form onSubmit={handleSubmit} className="flex flex-col" style={{ gap: '1.75rem' }}>
+      {/* Formulario scrolleable */}
+      <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', paddingBottom: '0.5rem' }}>
+      <form id="form-nuevo-animal" onSubmit={handleSubmit} className="flex flex-col" style={{ gap: '1.75rem', paddingTop: '1.75rem' }}>
 
         {/* ── Datos generales ── */}
         <Seccion titulo="Datos generales" Icon={PawPrint}>
@@ -694,22 +696,26 @@ const handleSubmit = async (e) => {
           </div>
         )}
 
-        {/* ── Acciones ── */}
+      </form>
+      </div>
+
+      {/* Botones de acción fijos abajo */}
+      <div style={{ flexShrink: 0, paddingTop: '0.75rem' }}>
         {errorSubmit && (
-          <div className="rounded-2xl px-4 py-3 text-sm font-semibold" style={{ backgroundColor: '#FEE2E2', color: '#991B1B' }}>
+          <div className="rounded-2xl px-4 py-3 text-sm font-semibold mb-3" style={{ backgroundColor: '#FEE2E2', color: '#991B1B' }}>
             {errorSubmit}
           </div>
         )}
-        <div className="flex gap-4 pb-8">
+        <div className="flex gap-4">
           <button type="button" onClick={() => navigate(-1)} className="btn-secondary flex-1 justify-center">
             Cancelar
           </button>
-          <button type="submit" disabled={guardando} className="btn-primary flex-1 justify-center disabled:opacity-60">
+          <button type="submit" form="form-nuevo-animal" disabled={guardando} className="btn-primary flex-1 justify-center disabled:opacity-60">
             {guardando ? 'Guardando...' : 'Registrar animal'}
           </button>
         </div>
+      </div>
 
-      </form>
     </div>
   );
 }

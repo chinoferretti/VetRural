@@ -101,3 +101,33 @@ input:focus, select:focus, textarea:focus {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: #D1D5DB; border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: #9CA3AF; }
+
+/* ── Botones fill: ícono, texto y todo el interior se escala
+      con el tamaño real del botón (container queries) ─────── */
+.btn-fill { container-type: size; }
+
+/* Botón ANCHO (ratio ≥ 8:3) — ej. trabajos en columna mobile */
+@container (min-aspect-ratio: 8/3) {
+  .fill-icono {
+    width: clamp(1.5rem, 65cqh, 3rem);
+    height: clamp(1.5rem, 65cqh, 3rem);
+    border-radius: 0.625rem;
+    flex-shrink: 0;
+  }
+  .fill-svg   { width: clamp(0.85rem, 35cqh, 1.5rem); height: clamp(0.85rem, 35cqh, 1.5rem); }
+  .fill-label { font-size: clamp(0.7rem, 20cqh, 1.05rem); line-height: 1.2; }
+  .fill-desc  { display: none; }
+}
+
+/* Botón CUADRADO o más alto (ratio < 8:3) — Dashboard, 2x2 */
+@container (max-aspect-ratio: 8/3) {
+  .fill-icono {
+    width: clamp(2rem, 38cqmin, 5.5rem);
+    height: clamp(2rem, 38cqmin, 5.5rem);
+    border-radius: 1rem;
+    flex-shrink: 0;
+  }
+  .fill-svg   { width: clamp(1rem, 20cqmin, 3rem); height: clamp(1rem, 20cqmin, 3rem); }
+  .fill-label { font-size: clamp(0.65rem, 9cqmin, 1.4rem); line-height: 1.15; }
+  .fill-desc  { font-size: clamp(0.5rem, 5.5cqmin, 0.875rem); line-height: 1.15; margin-top: 0.2em; }
+}

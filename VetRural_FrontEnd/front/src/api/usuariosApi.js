@@ -22,6 +22,16 @@ const TIPO_A_ROL = {
   Productor_Agropecuario: 'productor',
 };
 
+// ── GET /usuarios/by-email?email=... ─────────────────────────────────────────
+export async function buscarUsuarioPorEmail(email) {
+  try {
+    const { data } = await api.get('/usuarios/by-email', { params: { email } });
+    return { id: data.idUsuario, nombre: `${data.nombre} ${data.apellido}`.trim(), email: data.email };
+  } catch {
+    return null;
+  }
+}
+
 // ── GET /establecimientos/:id/usuarios ────────────────────────────────────────
 export async function getMiembros(establecimientoId) {
   try {

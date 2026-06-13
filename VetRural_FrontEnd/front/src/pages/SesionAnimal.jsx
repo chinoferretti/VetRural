@@ -174,8 +174,8 @@ export default function SesionAnimal() {
       {/* Cancelar sesión — top right */}
       <div className="flex justify-end" style={{ flexShrink: 0 }}>
         <button onClick={cancelarSesion}
-          className="px-5 py-3 rounded-xl font-semibold flex-shrink-0"
-          style={{ backgroundColor: '#FEE2E2', color: '#EF4444', fontSize: 'clamp(0.875rem, 2vw, 1rem)' }}>
+          className="px-6 py-3 rounded font-semibold flex-shrink-0"
+          style={{ backgroundColor: '#FEE2E2', color: '#EF4444', fontSize: 'clamp(0.875rem, 2vw, 1rem)', border: '1.5px solid #FECACA' }}>
           Cancelar sesión
         </button>
       </div>

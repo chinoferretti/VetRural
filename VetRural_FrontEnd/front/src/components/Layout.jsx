@@ -56,12 +56,12 @@ export default function Layout() {
   }, []);
 
   return (
-    <div className="flex flex-col" style={{ minHeight: '100dvh', backgroundColor: 'var(--crema)' }}>
+    <div className="flex flex-col" style={{ height: '100dvh', overflow: 'hidden', backgroundColor: 'var(--crema)' }}>
       <BannerOffline online={online} pendientes={pendientes} />
       <Navbar />
       <main className="flex flex-col flex-1"
-        style={{ padding: 'clamp(1rem, 3vw, 2.5rem) clamp(1rem, 4vw, 3rem)' }}>
-        <div className="flex flex-col flex-1" style={{ maxWidth: '1200px', margin: '0 auto', width: '100%' }}>
+        style={{ padding: 'clamp(1rem, 3vw, 2.5rem) clamp(1rem, 4vw, 3rem)', overflowY: 'auto', minHeight: 0 }}>
+        <div className="flex flex-col flex-1" style={{ maxWidth: '1200px', margin: '0 auto', width: '100%', minHeight: 0 }}>
           <Outlet />
         </div>
       </main>

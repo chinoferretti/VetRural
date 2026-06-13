@@ -88,20 +88,17 @@ function BajaCard({ animal, onDarAlta, onDepurar }) {
             </div>
             {/* Chips horizontales */}
             <div className="flex flex-wrap items-center" style={{ gap: '0.3rem' }}>
-              <span className="px-2 py-0.5 rounded-full text-xs font-bold flex-shrink-0"
-                style={{ backgroundColor: st.bg, color: st.color }}>
+              <span className="text-xs font-bold flex-shrink-0" style={{ color: st.color }}>
                 {st.label}
               </span>
               {animal.tipo && (
-                <span className="px-2 py-0.5 rounded-full text-xs font-semibold flex-shrink-0"
-                  style={{ backgroundColor: '#F3F4F6', color: '#6B7280' }}>
-                  {animal.tipo}
+                <span className="text-xs font-semibold flex-shrink-0" style={{ color: '#6B7280' }}>
+                  · {animal.tipo}
                 </span>
               )}
               {animal.lote && (
-                <span className="px-2 py-0.5 rounded-full text-xs font-semibold flex-shrink-0"
-                  style={{ backgroundColor: '#F3F4F6', color: '#6B7280' }}>
-                  Lote: {animal.lote}
+                <span className="text-xs font-semibold flex-shrink-0" style={{ color: '#6B7280' }}>
+                  · Lote: {animal.lote}
                 </span>
               )}
               {animal.fechaBaja && (
@@ -233,20 +230,12 @@ export default function AnimalesBajas() {
   });
 
   return (
-    <div className="flex flex-col w-full" style={{ gap: '1.5rem' }}>
+    <div className="flex flex-col flex-1 w-full" style={{ minHeight: 0, overflow: 'hidden' }}>
 
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        <button
-          onClick={() => navigate('/animales')}
-          className="flex items-center justify-center w-10 h-10 rounded-xl flex-shrink-0 transition-colors hover:bg-gray-100"
-          style={{ border: '1.5px solid #E5E7EB', color: '#6B7280' }}
-          aria-label="Volver al listado"
-        >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className="w-5 h-5">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-          </svg>
-        </button>
+      {/* Header + controles (fijo) */}
+      <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '0.75rem', paddingBottom: '0.75rem' }}>
+
+        {/* Header */}
         <div>
           <h1 className="text-3xl font-bold" style={{ color: 'var(--verde-oscuro)' }}>Bajas del rodeo</h1>
           {seleccionado && (
@@ -255,61 +244,63 @@ export default function AnimalesBajas() {
             </p>
           )}
         </div>
+
+        {/* Búsqueda y filtros (solo cuando hay datos) */}
+        {seleccionado && !cargando && bajas.length > 0 && (
+          <>
+            <input
+              type="text"
+              placeholder="Buscar por caravana, apodo o motivo..."
+              value={busqueda}
+              onChange={e => setBusqueda(e.target.value)}
+              className="w-full rounded-2xl border bg-white"
+              style={{ borderColor: '#D1D5DB', padding: '0.875rem 1.25rem', fontSize: '1rem' }}
+            />
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold flex-shrink-0" style={{ color: '#6B7280' }}>Sexo</span>
+              <div className="flex rounded-xl overflow-hidden" style={{ border: '1.5px solid #E5E7EB' }}>
+                {['Todos', 'Hembra', 'Macho'].map(s => (
+                  <button key={s} onClick={() => setFiltroSexo(s)}
+                    className="font-semibold transition-colors"
+                    style={{
+                      padding: '0.4rem 0.875rem', fontSize: '0.85rem',
+                      ...(filtroSexo === s
+                        ? { backgroundColor: 'var(--verde-oscuro)', color: 'white' }
+                        : { backgroundColor: 'white', color: '#6B7280' })
+                    }}>
+                    {s}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </>
+        )}
+
       </div>
 
-      {!seleccionado ? (
-        <div className="text-center py-24">
-          <p className="text-lg font-semibold" style={{ color: '#374151' }}>Seleccioná un establecimiento</p>
-        </div>
-      ) : cargando ? (
-        <LoadingSpinner texto="Cargando bajas..." />
-      ) : (
-        <>
-          {bajas.length > 0 && (
-            <>
-              <input
-                type="text"
-                placeholder="Buscar por caravana, apodo o motivo..."
-                value={busqueda}
-                onChange={e => setBusqueda(e.target.value)}
-                className="w-full rounded-2xl border bg-white"
-                style={{ borderColor: '#D1D5DB', padding: '0.875rem 1.25rem', fontSize: '1rem' }}
-              />
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-semibold flex-shrink-0" style={{ color: '#6B7280' }}>Sexo</span>
-                <div className="flex rounded-xl overflow-hidden" style={{ border: '1.5px solid #E5E7EB' }}>
-                  {['Todos', 'Hembra', 'Macho'].map(s => (
-                    <button key={s} onClick={() => setFiltroSexo(s)}
-                      className="font-semibold transition-colors"
-                      style={{
-                        padding: '0.4rem 0.875rem', fontSize: '0.85rem',
-                        ...(filtroSexo === s
-                          ? { backgroundColor: 'var(--verde-oscuro)', color: 'white' }
-                          : { backgroundColor: 'white', color: '#6B7280' })
-                      }}>
-                      {s}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </>
-          )}
+      {/* Contenido scrolleable interno */}
+      <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
+        {!seleccionado ? (
+          <div className="text-center py-24">
+            <p className="text-lg font-semibold" style={{ color: '#374151' }}>Seleccioná un establecimiento</p>
+          </div>
+        ) : cargando ? (
+          <LoadingSpinner texto="Cargando bajas..." />
+        ) : filtradas.length === 0 ? (
+          <div className="text-center py-24">
+            <p className="text-lg font-semibold" style={{ color: '#374151' }}>
+              {busqueda || filtroSexo !== 'Todos' ? 'No se encontraron resultados' : 'Sin animales dados de baja en este establecimiento'}
+            </p>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-2" style={{ paddingBottom: '0.5rem' }}>
+            {filtradas.map(a => (
+              <BajaCard key={a.id} animal={a} onDarAlta={handleDarAlta} onDepurar={handleDepurar} />
+            ))}
+          </div>
+        )}
+      </div>
 
-          {filtradas.length === 0 ? (
-            <div className="text-center py-24">
-              <p className="text-lg font-semibold" style={{ color: '#374151' }}>
-                {busqueda || filtroSexo !== 'Todos' ? 'No se encontraron resultados' : 'Sin animales dados de baja en este establecimiento'}
-              </p>
-            </div>
-          ) : (
-            <div className="flex flex-col gap-2">
-              {filtradas.map(a => (
-                <BajaCard key={a.id} animal={a} onDarAlta={handleDarAlta} onDepurar={handleDepurar} />
-              ))}
-            </div>
-          )}
-        </>
-      )}
     </div>
   );
 }

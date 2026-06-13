@@ -174,9 +174,8 @@ export default function SesionRegistro() {
 
   const guardarEventos = async () => {
     const bovinoId        = animal.id;
-    const registradoPorId = veterinarioId;
+    const registradoPorId = veterinarioId ?? -1;
     if (!bovinoId) throw new Error('No se encontró el animal. Reiniciá la sesión.');
-    if (!registradoPorId) throw new Error('No se pudo identificar al veterinario. Reiniciá la sesión.');
 
     const promises = [];
 
@@ -219,6 +218,9 @@ export default function SesionRegistro() {
         );
       }
     }
+
+    if (promises.length === 0) return;
+
     const resultados = await Promise.allSettled(promises);
     const fallidos = resultados.filter(r => r.status === 'rejected');
     if (fallidos.length > 0) {
@@ -233,7 +235,7 @@ export default function SesionRegistro() {
     setErrorGuardado('');
     try {
       await guardarEventos();
-      const registro = { animal, trabajosEfectivos, form };
+      const registro = { animal, tipoAnimal, trabajosEfectivos, form };
       const registros = [...(state.registros || []), registro];
       navigate('/sesion/animal', { state: { ...state, registros }, replace: true });
     } catch (err) {
@@ -248,7 +250,7 @@ export default function SesionRegistro() {
     setErrorGuardado('');
     try {
       await guardarEventos();
-      const registro = { animal, trabajosEfectivos, form };
+      const registro = { animal, tipoAnimal, trabajosEfectivos, form };
       const registros = [...(state.registros || []), registro];
       navigate('/sesion/resumen', { state: { ...state, registros }, replace: true });
     } catch (err) {
@@ -261,151 +263,150 @@ export default function SesionRegistro() {
   const cancelarSesion = () => navigate('/dashboard', { replace: true });
 
   return (
-    <div className="flex flex-col flex-1" style={{ gap: '1rem' }}>
+    <div className="flex flex-col flex-1" style={{ minHeight: 0, overflow: 'hidden' }}>
 
-      {/* Header */}
-      <div className="flex items-start justify-between gap-3" style={{ flexShrink: 0 }}>
+      {/* Header fijo */}
+      <div className="flex items-start justify-between gap-3" style={{ flexShrink: 0, paddingBottom: '1rem' }}>
         <div className="min-w-0">
-          <p className="font-mono text-sm" style={{ color: '#9CA3AF' }}>{animal.caravana}</p>
           <h1 className="font-bold truncate"
             style={{ color: 'var(--verde-oscuro)', fontSize: 'clamp(1.2rem, 3vw, 1.75rem)' }}>
             {animal.nombre || animal.caravana}
           </h1>
-          <div className="flex flex-wrap items-center gap-2 mt-2">
-            <span className="px-3 py-1 rounded-full text-sm font-semibold"
-              style={{ backgroundColor: '#F3F4F6', color: '#374151' }}>
+          <div className="flex flex-wrap items-center gap-3 mt-2">
+            <span className="text-sm font-semibold" style={{ color: '#374151' }}>
               {animal.sexo}
             </span>
-            {trabajosEfectivos.map(t => (
-              <span key={t} className="px-3 py-1 rounded-full text-sm font-semibold"
-                style={{ backgroundColor: '#F0FDF4', color: 'var(--verde-medio)', border: '1px solid #86EFAC' }}>
-                {t.charAt(0).toUpperCase() + t.slice(1)}
+            {trabajosEfectivos.map((t, i) => (
+              <span key={t} className="text-sm font-semibold" style={{ color: 'var(--verde-medio)' }}>
+                {i > 0 && <span style={{ color: '#D1D5DB', marginRight: '0.75rem' }}>·</span>}{t.charAt(0).toUpperCase() + t.slice(1)}
               </span>
             ))}
             {esMacho && trabajos.includes('tacto') && (
-              <span className="px-3 py-1 rounded-full text-sm font-semibold"
-                style={{ backgroundColor: '#FEE2E2', color: '#EF4444' }}>
-                Sin tacto
-              </span>
+              <span className="text-sm font-semibold" style={{ color: '#EF4444' }}>· Sin tacto</span>
             )}
           </div>
         </div>
         <button onClick={cancelarSesion} disabled={guardando}
-          className="px-5 py-3 rounded-xl font-semibold flex-shrink-0 disabled:opacity-50"
-          style={{ backgroundColor: '#FEE2E2', color: '#EF4444', fontSize: 'clamp(0.875rem, 2vw, 1rem)' }}>
-          Cancelar
+          className="px-6 py-3 rounded font-semibold flex-shrink-0 disabled:opacity-50"
+          style={{ backgroundColor: '#FEE2E2', color: '#EF4444', fontSize: 'clamp(0.875rem, 2vw, 1rem)', border: '1.5px solid #FECACA' }}>
+          Cancelar sesión
         </button>
       </div>
 
-      {/* Tipo */}
-      <div className="card" style={{ padding: 'clamp(1rem, 3vw, 1.5rem)' }}>
-        <h2 className="font-bold mb-4"
-          style={{ color: 'var(--verde-oscuro)', fontSize: 'clamp(1rem, 2.5vw, 1.2rem)' }}>
-          Tipo de animal
-        </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-semibold" style={{ color: '#374151' }}>Tipo</label>
-            <select value={tipoAnimal} onChange={e => handleTipoChange(e.target.value)}
-              className={inputCls} style={inputSty}>
-              <option value=""></option>
-              {tiposDisponibles.map(t => <option key={t}>{t}</option>)}
-            </select>
-          </div>
-        </div>
-      </div>
+      {/* Contenido scrolleable */}
+      <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', paddingBottom: '0.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
 
-      {/* Secciones */}
-      {tiene('boqueo') && (
-        <Seccion titulo="Boqueo" Icon={Smile}>
-          <Campo label="Dientes">
-            <select value={form.boqueo_dientes} onChange={e => set('boqueo_dientes', e.target.value)}
-              className={inputCls} style={inputSty}>
-              <option value=""></option>
-              {DIENTES_OPCIONES.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-            </select>
-          </Campo>
-          <Campo label="Deterioro">
-            <select value={form.boqueo_deterioro} onChange={e => set('boqueo_deterioro', e.target.value)}
-              className={inputCls} style={inputSty}>
-              <option value=""></option>
-              {DETERIOROS.map(d => <option key={d}>{d}</option>)}
-            </select>
-          </Campo>
-          <Campo label="Dentadura">
-            <select value={form.boqueo_dentadura} onChange={e => set('boqueo_dentadura', e.target.value)}
-              className={inputCls} style={inputSty}>
-              <option value=""></option>
-              {DENTADURAS.map(d => <option key={d.value} value={d.value}>{d.label}</option>)}
-            </select>
-          </Campo>
-        </Seccion>
-      )}
-
-      {tiene('pesaje') && (
-        <Seccion titulo="Pesaje" Icon={Scale}>
-          <Campo label="Peso (kg)">
-            <input type="number" min="0" value={form.peso}
-              onChange={e => set('peso', e.target.value)}
-              onWheel={e => e.target.blur()}
-              placeholder="Ej: 420" className={inputCls} style={inputSty} />
-          </Campo>
-        </Seccion>
-      )}
-
-      {tiene('tacto') && (
-        <Seccion titulo="Tacto" Icon={Hand}>
-          <Campo label="Situación">
-            <select
-              value={form.tacto_situacion}
-              onChange={e => set('tacto_situacion', e.target.value)}
-              disabled={tipoAnimal === 'Ternera'}
-              className={inputCls}
-              style={{ ...inputSty, ...(tipoAnimal === 'Ternera' ? { backgroundColor: '#F9FAFB', color: '#6B7280', cursor: 'not-allowed' } : {}) }}
-            >
-              {tipoAnimal !== 'Ternera' && <option value=""></option>}
-              {SITUACIONES_TACTO.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
-            </select>
-            {tipoAnimal === 'Ternera' && (
-              <p className="text-xs mt-1" style={{ color: '#9CA3AF' }}>Las terneras se registran como "No aplica"</p>
-            )}
-          </Campo>
-          {form.tacto_situacion === 'Preñada' && (
-            <Campo label="Período">
-              <select value={form.tacto_periodo} onChange={e => set('tacto_periodo', e.target.value)}
+        {/* Tipo */}
+        <div className="card" style={{ padding: 'clamp(1rem, 3vw, 1.5rem)' }}>
+          <h2 className="font-bold mb-4"
+            style={{ color: 'var(--verde-oscuro)', fontSize: 'clamp(1rem, 2.5vw, 1.2rem)' }}>
+            Tipo de animal
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-semibold" style={{ color: '#374151' }}>Tipo</label>
+              <select value={tipoAnimal} onChange={e => handleTipoChange(e.target.value)}
                 className={inputCls} style={inputSty}>
                 <option value=""></option>
-                {PERIODOS_PRENEZ.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
+                {tiposDisponibles.map(t => <option key={t}>{t}</option>)}
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* Secciones */}
+        {tiene('boqueo') && (
+          <Seccion titulo="Boqueo" Icon={Smile}>
+            <Campo label="Dientes">
+              <select value={form.boqueo_dientes} onChange={e => set('boqueo_dientes', e.target.value)}
+                className={inputCls} style={inputSty}>
+                <option value=""></option>
+                {DIENTES_OPCIONES.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
               </select>
             </Campo>
-          )}
-        </Seccion>
-      )}
+            <Campo label="Deterioro">
+              <select value={form.boqueo_deterioro} onChange={e => set('boqueo_deterioro', e.target.value)}
+                className={inputCls} style={inputSty}>
+                <option value=""></option>
+                {DETERIOROS.map(d => <option key={d}>{d}</option>)}
+              </select>
+            </Campo>
+            <Campo label="Dentadura">
+              <select value={form.boqueo_dentadura} onChange={e => set('boqueo_dentadura', e.target.value)}
+                className={inputCls} style={inputSty}>
+                <option value=""></option>
+                {DENTADURAS.map(d => <option key={d.value} value={d.value}>{d.label}</option>)}
+              </select>
+            </Campo>
+          </Seccion>
+        )}
 
-      {tiene('vacunacion') && (
-        <Seccion titulo="Vacunación — Última dosis" Icon={Syringe}>
-          {[
-            ['vac_aftosa',      'Aftosa'],
-            ['vac_brucelosis',  'Brucelosis'],
-            ['vac_carbunco',    'Carbunco'],
-            ['vac_clostridial', 'Clostridial'],
-            ['vac_ibr',         'IBR'],
-            ['vac_bvd',         'BVD'],
-          ].map(([campo, label]) => (
-            <CampoVacuna key={campo} label={label} value={form[campo]} onChange={v => set(campo, v)} hint={VACUNA_HINTS[campo]} />
-          ))}
-        </Seccion>
-      )}
+        {tiene('pesaje') && (
+          <Seccion titulo="Pesaje" Icon={Scale}>
+            <Campo label="Peso (kg)">
+              <input type="number" min="0" value={form.peso}
+                onChange={e => set('peso', e.target.value)}
+                onWheel={e => e.target.blur()}
+                placeholder="Ej: 420" className={inputCls} style={inputSty} />
+            </Campo>
+          </Seccion>
+        )}
 
-      {/* Error de guardado */}
-      {errorGuardado && (
-        <div className="rounded-xl px-4 py-3 text-sm font-medium" style={{ backgroundColor: '#FEE2E2', color: '#991B1B', flexShrink: 0 }}>
-          {errorGuardado}
-        </div>
-      )}
+        {tiene('tacto') && (
+          <Seccion titulo="Tacto" Icon={Hand}>
+            <Campo label="Situación">
+              <select
+                value={form.tacto_situacion}
+                onChange={e => set('tacto_situacion', e.target.value)}
+                disabled={tipoAnimal === 'Ternera'}
+                className={inputCls}
+                style={{ ...inputSty, ...(tipoAnimal === 'Ternera' ? { backgroundColor: '#F9FAFB', color: '#6B7280', cursor: 'not-allowed' } : {}) }}
+              >
+                {tipoAnimal !== 'Ternera' && <option value=""></option>}
+                {SITUACIONES_TACTO.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+              </select>
+              {tipoAnimal === 'Ternera' && (
+                <p className="text-xs mt-1" style={{ color: '#9CA3AF' }}>Las terneras se registran como "No aplica"</p>
+              )}
+            </Campo>
+            {form.tacto_situacion === 'Preñada' && (
+              <Campo label="Período">
+                <select value={form.tacto_periodo} onChange={e => set('tacto_periodo', e.target.value)}
+                  className={inputCls} style={inputSty}>
+                  <option value=""></option>
+                  {PERIODOS_PRENEZ.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
+                </select>
+              </Campo>
+            )}
+          </Seccion>
+        )}
 
-      {/* Acciones */}
-      <div className="flex flex-col gap-3 pb-4" style={{ flexShrink: 0 }}>
+        {tiene('vacunacion') && (
+          <Seccion titulo="Vacunación — Última dosis" Icon={Syringe}>
+            {[
+              ['vac_aftosa',      'Aftosa'],
+              ['vac_brucelosis',  'Brucelosis'],
+              ['vac_carbunco',    'Carbunco'],
+              ['vac_clostridial', 'Clostridial'],
+              ['vac_ibr',         'IBR'],
+              ['vac_bvd',         'BVD'],
+            ].map(([campo, label]) => (
+              <CampoVacuna key={campo} label={label} value={form[campo]} onChange={v => set(campo, v)} hint={VACUNA_HINTS[campo]} />
+            ))}
+          </Seccion>
+        )}
+
+        {/* Error de guardado */}
+        {errorGuardado && (
+          <div className="rounded-xl px-4 py-3 text-sm font-medium" style={{ backgroundColor: '#FEE2E2', color: '#991B1B' }}>
+            {errorGuardado}
+          </div>
+        )}
+
+      </div>
+
+      {/* Botones fijos abajo */}
+      <div className="flex flex-col gap-3 pb-4" style={{ flexShrink: 0, paddingTop: '0.75rem' }}>
         <button onClick={handleSiguiente} disabled={guardando}
           className="btn-primary w-full disabled:opacity-60"
           style={{ padding: 'clamp(0.85rem, 2.5vw, 1.1rem)', fontSize: 'clamp(0.95rem, 2.5vw, 1.1rem)' }}>

@@ -77,112 +77,119 @@ export default function Animales() {
   if (cargando) return <LoadingSpinner texto="Cargando animales..." />;
 
   return (
-    <div className="flex flex-col w-full" style={{ gap: '1.5rem' }}>
+    <div className="flex flex-col flex-1 w-full" style={{ minHeight: 0, overflow: 'hidden' }}>
 
-      {/* Header */}
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <div>
-          <h1 className="text-3xl font-bold" style={{ color: 'var(--verde-oscuro)' }}>Animales</h1>
-          <p className="mt-1 text-sm" style={{ color: '#6B7280' }}>
-            {seleccionado.nombre} · {filtrados.length} de {animales.length} animales
-          </p>
-        </div>
-        <div className="flex items-center gap-2 flex-shrink-0">
-          <button
-            onClick={() => navigate('/animales/bajas')}
-            className="flex items-center gap-1.5 rounded-xl font-semibold transition-colors hover:bg-gray-100"
-            style={{ border: '1.5px solid #E5E7EB', padding: '0.6rem 1rem', fontSize: '0.9rem', color: '#6B7280', backgroundColor: 'white' }}
-          >
-            Animales inactivos
-          </button>
-          {usuario && (
+      {/* Header + controles (fijo) */}
+      <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '0.75rem', paddingBottom: '0.75rem' }}>
+
+        {/* Header */}
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div>
+            <h1 className="text-3xl font-bold" style={{ color: 'var(--verde-oscuro)' }}>Animales</h1>
+            <p className="mt-1 text-sm" style={{ color: '#6B7280' }}>
+              {filtrados.length} de {animales.length} animales
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
             <button
-              onClick={() => navigate('/animales/nuevo')}
-              className="btn-primary"
-              style={{ fontSize: '1rem', padding: '0.75rem 1.25rem' }}
+              onClick={() => navigate('/animales/bajas')}
+              className="flex items-center gap-1.5 rounded-xl font-semibold transition-colors hover:bg-gray-100"
+              style={{ border: '1.5px solid #E5E7EB', padding: '0.45rem 0.75rem', fontSize: '0.8rem', color: '#6B7280', backgroundColor: 'white', whiteSpace: 'nowrap' }}
             >
-              + Nuevo animal
+              Inactivos
             </button>
-          )}
-        </div>
-      </div>
-
-      {error && (
-        <div className="rounded-2xl px-4 py-3 text-sm font-semibold" style={{ backgroundColor: '#FEE2E2', color: '#991B1B' }}>
-          {error}
-        </div>
-      )}
-
-      {/* Búsqueda */}
-      <input
-        type="text"
-        placeholder="Buscar por caravana o apodo..."
-        value={busqueda}
-        onChange={e => setBusqueda(e.target.value)}
-        className="w-full rounded-2xl border bg-white"
-        style={{ borderColor: '#D1D5DB', padding: '0.875rem 1.25rem', fontSize: '1rem' }}
-      />
-
-      {/* Filtros */}
-      <div className="flex flex-wrap gap-3 items-end">
-        {/* Sexo */}
-        <div className="flex flex-col gap-1">
-          <span className="text-xs font-semibold" style={{ color: '#6B7280' }}>Sexo</span>
-          <div className="flex rounded-xl overflow-hidden" style={{ border: '1.5px solid #E5E7EB' }}>
-            {['Todos', 'Hembra', 'Macho'].map(s => (
-              <button key={s} onClick={() => setFiltroSexo(s)}
-                className="font-semibold transition-colors"
-                style={{
-                  padding: '0.5rem 0.875rem', fontSize: '0.85rem',
-                  ...(filtroSexo === s
-                    ? { backgroundColor: 'var(--verde-oscuro)', color: 'white' }
-                    : { backgroundColor: 'white', color: '#6B7280' })
-                }}>
-                {s}
+            {usuario && (
+              <button
+                onClick={() => navigate('/animales/nuevo')}
+                className="btn-primary"
+                style={{ fontSize: '0.85rem', padding: '0.45rem 0.875rem', whiteSpace: 'nowrap' }}
+              >
+                + Nuevo
               </button>
-            ))}
+            )}
           </div>
         </div>
 
-        {/* Tipo */}
-        <div className="flex flex-col gap-1">
-          <span className="text-xs font-semibold" style={{ color: '#6B7280' }}>Tipo</span>
-          <select value={filtroTipo} onChange={e => setFiltroTipo(e.target.value)}
-            className="rounded-xl border bg-white font-semibold"
-            style={{ borderColor: '#E5E7EB', borderWidth: '1.5px', padding: '0.5rem 0.875rem', fontSize: '0.85rem', color: '#374151' }}>
-            {tiposDisponibles.map(t => <option key={t}>{t}</option>)}
-          </select>
-        </div>
+        {error && (
+          <div className="rounded-2xl px-4 py-3 text-sm font-semibold" style={{ backgroundColor: '#FEE2E2', color: '#991B1B' }}>
+            {error}
+          </div>
+        )}
 
-        {/* Lote */}
-        {lotesDisponibles.length > 1 && (
+        {/* Búsqueda */}
+        <input
+          type="text"
+          placeholder="Buscar por caravana o apodo..."
+          value={busqueda}
+          onChange={e => setBusqueda(e.target.value)}
+          className="w-full rounded-2xl border bg-white"
+          style={{ borderColor: '#D1D5DB', padding: '0.875rem 1.25rem', fontSize: '1rem' }}
+        />
+
+        {/* Filtros */}
+        <div className="flex flex-wrap gap-3 items-end">
+          {/* Sexo */}
           <div className="flex flex-col gap-1">
-            <span className="text-xs font-semibold" style={{ color: '#6B7280' }}>Lote</span>
-            <select value={filtroLote} onChange={e => setFiltroLote(e.target.value)}
+            <span className="text-xs font-semibold" style={{ color: '#6B7280' }}>Sexo</span>
+            <div className="flex rounded-xl overflow-hidden" style={{ border: '1.5px solid #E5E7EB' }}>
+              {['Todos', 'Hembra', 'Macho'].map(s => (
+                <button key={s} onClick={() => setFiltroSexo(s)}
+                  className="font-semibold transition-colors"
+                  style={{
+                    padding: '0.5rem 0.875rem', fontSize: '0.85rem',
+                    ...(filtroSexo === s
+                      ? { backgroundColor: 'var(--verde-oscuro)', color: 'white' }
+                      : { backgroundColor: 'white', color: '#6B7280' })
+                  }}>
+                  {s}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Tipo */}
+          <div className="flex flex-col gap-1">
+            <span className="text-xs font-semibold" style={{ color: '#6B7280' }}>Tipo</span>
+            <select value={filtroTipo} onChange={e => setFiltroTipo(e.target.value)}
               className="rounded-xl border bg-white font-semibold"
               style={{ borderColor: '#E5E7EB', borderWidth: '1.5px', padding: '0.5rem 0.875rem', fontSize: '0.85rem', color: '#374151' }}>
-              {lotesDisponibles.map(l => <option key={l}>{l}</option>)}
+              {tiposDisponibles.map(t => <option key={t}>{t}</option>)}
             </select>
+          </div>
+
+          {/* Lote */}
+          {lotesDisponibles.length > 1 && (
+            <div className="flex flex-col gap-1">
+              <span className="text-xs font-semibold" style={{ color: '#6B7280' }}>Lote</span>
+              <select value={filtroLote} onChange={e => setFiltroLote(e.target.value)}
+                className="rounded-xl border bg-white font-semibold"
+                style={{ borderColor: '#E5E7EB', borderWidth: '1.5px', padding: '0.5rem 0.875rem', fontSize: '0.85rem', color: '#374151' }}>
+                {lotesDisponibles.map(l => <option key={l}>{l}</option>)}
+              </select>
+            </div>
+          )}
+        </div>
+
+      </div>
+
+      {/* Lista scrolleable interna */}
+      <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
+        {filtrados.length === 0 ? (
+          <div className="text-center py-24">
+            <p className="text-lg font-semibold" style={{ color: '#374151' }}>
+              {busqueda || filtroSexo !== 'Todos' || filtroTipo !== 'Todos' || filtroLote !== 'Todos'
+                ? 'No se encontraron animales con ese filtro'
+                : 'Este establecimiento no tiene animales registrados'}
+            </p>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-3" style={{ paddingBottom: '0.5rem' }}>
+            {filtrados.map(a => (
+              <AnimalCard key={a.id} animal={a} onDarBaja={darBaja} />
+            ))}
           </div>
         )}
       </div>
-
-      {/* Lista */}
-      {filtrados.length === 0 ? (
-        <div className="text-center py-24">
-          <p className="text-lg font-semibold" style={{ color: '#374151' }}>
-            {busqueda || filtroSexo !== 'Todos' || filtroTipo !== 'Todos' || filtroLote !== 'Todos'
-              ? 'No se encontraron animales con ese filtro'
-              : 'Este establecimiento no tiene animales registrados'}
-          </p>
-        </div>
-      ) : (
-        <div className="flex flex-col gap-3">
-          {filtrados.map(a => (
-            <AnimalCard key={a.id} animal={a} onDarBaja={darBaja} />
-          ))}
-        </div>
-      )}
 
     </div>
   );

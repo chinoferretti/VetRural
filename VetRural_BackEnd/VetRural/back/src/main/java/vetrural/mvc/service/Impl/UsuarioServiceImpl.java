@@ -77,6 +77,11 @@ public class UsuarioServiceImpl implements UsuarioService {
     }
 
     @Override
+    public Optional<Usuario> getByEmail(String email) {
+        return usuarioRepository.findByEmail(email);
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public Optional<Usuario> login(String email, String contrasena) {
         if (contrasena == null) return Optional.empty();

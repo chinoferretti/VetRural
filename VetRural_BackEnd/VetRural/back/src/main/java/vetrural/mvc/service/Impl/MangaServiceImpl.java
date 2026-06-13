@@ -92,6 +92,7 @@ public class MangaServiceImpl implements MangaService {
     }
 
     private Usuario validarUsuarioHabilitado(Long idUsuario) {
+        if (idUsuario == null) return null;
         Usuario u = usuarioService.obtenerOFallar(idUsuario);
         if (!usuarioService.puedeRegistrarEventoSanitario(u)) {
             throw new IllegalArgumentException("El usuario " + idUsuario + " no está habilitado para registrar eventos sanitarios");

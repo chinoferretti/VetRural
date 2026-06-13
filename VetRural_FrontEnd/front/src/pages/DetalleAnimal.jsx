@@ -226,68 +226,76 @@ export default function DetalleAnimal() {
   const estaDadoDeBaja = animal.estado && animal.estado !== 'Activo';
 
   return (
-    <div className="flex flex-col w-full" style={{ gap: '1.5rem' }}>
+    <div className="flex flex-col flex-1" style={{ minHeight: 0, overflow: 'hidden' }}>
 
-      {/* Banner de baja */}
-      {estaDadoDeBaja && (
-        <div className="rounded-2xl px-4 py-3 flex items-center gap-3"
-          style={{ backgroundColor: '#FEF3C7', border: '1.5px solid #FDE68A' }}>
-          <Lock className="w-5 h-5 flex-shrink-0" style={{ color: '#B45309' }} />
-          <div className="flex-1 min-w-0">
-            <p className="font-bold text-sm" style={{ color: '#92400E' }}>
-              Animal dado de baja — {animal.estado}
-            </p>
-            {animal.fechaBaja && (
-              <p className="text-xs mt-0.5" style={{ color: '#B45309' }}>
-                Fecha: {formatFechaLocal(animal.fechaBaja)}
-                {animal.motivoBaja ? ` · Motivo: ${animal.motivoBaja}` : ''}
+      {/* Header fijo: banner de baja + toolbar */}
+      <div style={{ flexShrink: 0 }}>
+
+        {/* Banner de baja */}
+        {estaDadoDeBaja && (
+          <div className="rounded-2xl px-4 py-3 flex items-center gap-3"
+            style={{ backgroundColor: '#FEF3C7', border: '1.5px solid #FDE68A', marginBottom: '1rem' }}>
+            <Lock className="w-5 h-5 flex-shrink-0" style={{ color: '#B45309' }} />
+            <div className="flex-1 min-w-0">
+              <p className="font-bold text-sm" style={{ color: '#92400E' }}>
+                Animal dado de baja — {animal.estado}
               </p>
-            )}
+              {animal.fechaBaja && (
+                <p className="text-xs mt-0.5" style={{ color: '#B45309' }}>
+                  Fecha: {formatFechaLocal(animal.fechaBaja)}
+                  {animal.motivoBaja ? ` · Motivo: ${animal.motivoBaja}` : ''}
+                </p>
+              )}
+            </div>
+            <button
+              disabled={dandoDeAlta}
+              onClick={async () => {
+                setDandoDeAlta(true);
+                try {
+                  await darDeAltaAnimal(id);
+                  await cargarDatos(true);
+                } finally {
+                  setDandoDeAlta(false);
+                }
+              }}
+              className="flex-shrink-0 rounded-xl font-semibold text-xs disabled:opacity-60"
+              style={{ backgroundColor: 'white', color: '#92400E', border: '1.5px solid #FDE68A', padding: '0.4rem 0.875rem' }}
+            >
+              {dandoDeAlta ? 'Reactivando...' : 'Dar de alta'}
+            </button>
           </div>
-          <button
-            disabled={dandoDeAlta}
-            onClick={async () => {
-              setDandoDeAlta(true);
-              try {
-                await darDeAltaAnimal(id);
-                await cargarDatos(true);
-              } finally {
-                setDandoDeAlta(false);
-              }
-            }}
-            className="flex-shrink-0 rounded-xl font-semibold text-xs disabled:opacity-60"
-            style={{ backgroundColor: 'white', color: '#92400E', border: '1.5px solid #FDE68A', padding: '0.4rem 0.875rem' }}
-          >
-            {dandoDeAlta ? 'Reactivando...' : 'Dar de alta'}
-          </button>
-        </div>
-      )}
+        )}
 
-      {/* Toolbar */}
-      <div className="flex items-center justify-end gap-2">
-        {!estaDadoDeBaja && (
+        {/* Toolbar */}
+        <div className="flex items-center justify-end gap-2" style={{ marginBottom: '1rem' }}>
+          {!estaDadoDeBaja && (
+            <button
+              onClick={() => navigate(`/animales/${id}/editar`)}
+              className="flex items-center gap-1.5 btn-secondary"
+              style={{ fontSize: '0.8rem', padding: '0.5rem 0.875rem' }}
+            >
+              <Pencil className="w-3.5 h-3.5" />
+              Editar
+            </button>
+          )}
           <button
-            onClick={() => navigate(`/animales/${id}/editar`)}
+            onClick={() => cargarDatos(true)}
+            disabled={actualizando}
             className="flex items-center gap-1.5 btn-secondary"
             style={{ fontSize: '0.8rem', padding: '0.5rem 0.875rem' }}
           >
-            <Pencil className="w-3.5 h-3.5" />
-            Editar
+            <RefreshCw className={`w-3.5 h-3.5 ${actualizando ? 'animate-spin' : ''}`} />
+            {actualizando ? 'Actualizando…' : 'Actualizar'}
           </button>
-        )}
-        <button
-          onClick={() => cargarDatos(true)}
-          disabled={actualizando}
-          className="flex items-center gap-1.5 btn-secondary"
-          style={{ fontSize: '0.8rem', padding: '0.5rem 0.875rem' }}
-        >
-          <RefreshCw className={`w-3.5 h-3.5 ${actualizando ? 'animate-spin' : ''}`} />
-          {actualizando ? 'Actualizando…' : 'Actualizar'}
-        </button>
-        {horaActualizacion && (
-          <p className="text-xs" style={{ color: '#9CA3AF' }}>Datos al {horaActualizacion}</p>
-        )}
+          {horaActualizacion && (
+            <p className="text-xs" style={{ color: '#9CA3AF' }}>Datos al {horaActualizacion}</p>
+          )}
+        </div>
+
       </div>
+
+      {/* Contenido scrolleable */}
+      <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', paddingBottom: '1rem' }}>
 
       {/* Grilla principal */}
       <div className="flex flex-col gap-4">
@@ -455,7 +463,7 @@ export default function DetalleAnimal() {
               : <ChevronDown className="w-5 h-5" style={{ color: '#9CA3AF' }} />}
           </button>
           {mostrarHistorial && (
-            <div className="mt-4 flex flex-col gap-2">
+            <div className="mt-4 flex flex-col" style={{ gap: '0.6rem' }}>
               {cargandoEventos ? (
                 <p className="text-sm" style={{ color: '#9CA3AF' }}>Cargando eventos...</p>
               ) : errorEventos ? (
@@ -463,24 +471,35 @@ export default function DetalleAnimal() {
               ) : sesionesHistorial.length === 0 ? (
                 <p className="text-sm" style={{ color: '#9CA3AF' }}>Sin eventos registrados</p>
               ) : (
-                sesionesHistorial.map((sesion, i) => (
-                  <div key={i} className="flex items-center justify-between px-3 py-2.5 rounded-xl"
-                    style={{ backgroundColor: '#F9FAFB', border: '1px solid #E5E7EB' }}>
-                    <div className="flex flex-wrap gap-1.5">
-                      {[...sesion.tipos].map(tipo => (
-                        <span key={tipo} className="px-2 py-0.5 rounded-full text-xs font-semibold"
-                          style={{ backgroundColor: '#EBF7F1', color: 'var(--verde-oscuro)' }}>
-                          {TIPO_LABEL[tipo] ?? tipo}
-                        </span>
-                      ))}
+                sesionesHistorial.map((sesion, i) => {
+                  const num = sesionesHistorial.length - i;
+                  const trabajos = [...sesion.tipos]
+                    .filter(t => t !== 'Vacunacion')
+                    .map(t => TIPO_LABEL[t] ?? t)
+                    .join(' · ');
+                  return (
+                    <div key={i} className="flex items-center gap-2" style={{ padding: '0.25rem 0' }}>
+                      <span className="text-xs font-bold flex-shrink-0" style={{ color: 'var(--verde-medio)', minWidth: '2rem' }}>
+                        #{num}
+                      </span>
+                      <span className="text-xs font-medium flex-shrink-0" style={{ color: '#374151' }}>
+                        {sesion.fecha}
+                      </span>
+                      {trabajos && (
+                        <>
+                          <span className="text-xs flex-shrink-0" style={{ color: '#D1D5DB' }}>—</span>
+                          <span className="text-xs" style={{ color: '#6B7280' }}>{trabajos}</span>
+                        </>
+                      )}
                     </div>
-                    <p className="text-xs flex-shrink-0 ml-3" style={{ color: '#9CA3AF' }}>{sesion.fecha}</p>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           )}
         </div>
+
+      </div>
 
       </div>
     </div>

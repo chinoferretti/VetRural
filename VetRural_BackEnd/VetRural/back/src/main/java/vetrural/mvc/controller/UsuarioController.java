@@ -49,6 +49,14 @@ public class UsuarioController {
         return ResponseEntity.noContent().build();
     }
 
+    @GetMapping("/by-email")
+    public ResponseEntity<UsuarioResponse> getByEmail(@RequestParam String email) {
+        return usuarioService.getByEmail(email)
+                .map(UsuarioMapper::toResponse)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
     @GetMapping("/veterinarios")
     public List<UsuarioResponse> listarVeterinarios() {
         return usuarioService.listarVeterinarios().stream()

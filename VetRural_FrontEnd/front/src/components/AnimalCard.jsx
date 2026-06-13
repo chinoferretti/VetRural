@@ -81,15 +81,13 @@ export default function AnimalCard({ animal, onDarBaja }) {
             {(animal.tipo || animal.lote) && (
               <div className="flex flex-wrap items-center" style={{ gap: '0.3rem' }}>
                 {animal.tipo && (
-                  <span className="px-2 py-0.5 rounded-full text-xs font-semibold"
-                    style={{ backgroundColor: '#EBF7F1', color: 'var(--verde-oscuro)' }}>
+                  <span className="text-xs font-semibold" style={{ color: 'var(--verde-oscuro)' }}>
                     {animal.tipo}
                   </span>
                 )}
                 {animal.lote && (
-                  <span className="px-2 py-0.5 rounded-full text-xs font-semibold"
-                    style={{ backgroundColor: '#F3F4F6', color: '#6B7280' }}>
-                    Lote: {animal.lote}
+                  <span className="text-xs font-semibold" style={{ color: '#6B7280' }}>
+                    {animal.tipo ? `· Lote: ${animal.lote}` : `Lote: ${animal.lote}`}
                   </span>
                 )}
               </div>
