@@ -276,6 +276,9 @@ export default function SesionRegistro() {
             <span className="text-sm font-semibold" style={{ color: '#374151' }}>
               {animal.sexo}
             </span>
+            {(trabajosEfectivos.length > 0 || (esMacho && trabajos.includes('tacto'))) && (
+              <span style={{ width: '1.5px', height: '0.9rem', backgroundColor: '#D1D5DB', borderRadius: '999px', flexShrink: 0 }} />
+            )}
             {trabajosEfectivos.map((t, i) => (
               <span key={t} className="text-sm font-semibold" style={{ color: 'var(--verde-medio)' }}>
                 {i > 0 && <span style={{ color: '#D1D5DB', marginRight: '0.75rem' }}>·</span>}{t.charAt(0).toUpperCase() + t.slice(1)}

@@ -170,10 +170,10 @@ export default function SesionResumen() {
         <div className="flex items-start justify-between gap-3">
           <div>
             <div className="flex items-center gap-2 mb-0.5">
-              <CheckCircle2 className="w-5 h-5 flex-shrink-0" style={{ color: 'var(--verde-medio)' }} />
-              <h1 className="font-bold" style={{ color: 'var(--verde-oscuro)', fontSize: 'clamp(1.1rem, 3vw, 1.5rem)' }}>
+              <h1 className="font-bold" style={{ color: 'var(--verde-oscuro)', fontSize: 'clamp(1.1rem, 3vw, 1.5rem)', marginLeft: '0.25rem' }}>
                 Sesión finalizada
               </h1>
+              <CheckCircle2 className="w-5 h-5 flex-shrink-0" style={{ color: 'var(--verde-medio)' }} />
             </div>
             <p className="text-xs" style={{ color: '#9CA3AF' }}>
               {fecha}{est ? ` · ${est}` : ''}{veterinario ? ` · ${veterinario}` : ''}
@@ -181,27 +181,21 @@ export default function SesionResumen() {
             </p>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
-            <button onClick={() => navigate('/historial', { replace: true })}
-              className="flex items-center justify-center w-9 h-9 rounded-xl transition-colors hover:bg-gray-100"
-              style={{ border: '1.5px solid #E5E7EB', color: '#6B7280' }}
-              title="Volver al historial">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className="w-4 h-4">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-              </svg>
-            </button>
             <button onClick={handleDescargarPDF} disabled={descargando}
-              className="flex items-center justify-center w-9 h-9 rounded-xl transition-colors hover:bg-green-50"
-              style={{ border: '1.5px solid #E5E7EB', color: 'var(--verde-medio)', opacity: descargando ? 0.6 : 1 }}
+              className="flex items-center gap-1.5 rounded-xl font-semibold transition-colors hover:bg-gray-100"
+              style={{ border: '2px solid var(--verde-medio)', padding: '0.45rem 0.75rem', fontSize: '0.8rem', color: '#374151', backgroundColor: 'white', whiteSpace: 'nowrap', opacity: descargando ? 0.6 : 1 }}
               title={descargando ? 'Generando PDF…' : 'Descargar reporte PDF'}>
               {descargando
                 ? <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="31.4" strokeDashoffset="10" /></svg>
                 : <Download className="w-4 h-4" />}
+              PDF
             </button>
             <button onClick={handleCompartir}
-              className="flex items-center justify-center w-9 h-9 rounded-xl transition-colors hover:bg-green-50"
-              style={{ border: '1.5px solid #86EFAC', color: 'var(--verde-oscuro)' }}
+              className="flex items-center gap-1.5 rounded-xl font-semibold transition-colors hover:bg-green-50"
+              style={{ border: '2px solid var(--verde-medio)', padding: '0.45rem 0.75rem', fontSize: '0.8rem', color: 'var(--verde-oscuro)', backgroundColor: 'white', whiteSpace: 'nowrap' }}
               title="Compartir">
               <Share2 className="w-4 h-4" />
+              Compartir
             </button>
           </div>
         </div>
@@ -216,7 +210,7 @@ export default function SesionResumen() {
             {total}
           </p>
           <p className="font-semibold mt-2" style={{ color: '#6B7280', fontSize: 'clamp(0.9rem, 2vw, 1.1rem)' }}>
-            {total === 1 ? 'animal procesado' : 'animales procesados'}
+            {total === 1 ? 'Animal procesado' : 'Animales procesados'}
           </p>
         </div>
 

@@ -101,7 +101,7 @@ export default function AnimalCard({ animal, onDarBaja }) {
             <button
               onClick={handleEditar}
               className="flex items-center justify-center rounded-xl transition-colors hover:bg-green-50"
-              style={{ border: '1.5px solid #E5E7EB', color: 'var(--verde-medio)', width: '2.2rem', height: '2.2rem' }}
+              style={{ border: '2px solid var(--verde-medio)', color: 'var(--verde-medio)', width: '2.2rem', height: '2.2rem' }}
               title="Editar"
             >
               <Pencil style={{ width: '0.8rem', height: '0.8rem' }} />
@@ -109,7 +109,7 @@ export default function AnimalCard({ animal, onDarBaja }) {
             <button
               onClick={handleIniciarBaja}
               className="flex items-center justify-center rounded-xl transition-colors hover:bg-orange-50"
-              style={{ border: '1.5px solid #E5E7EB', color: '#F59E0B', width: '2.2rem', height: '2.2rem' }}
+              style={{ border: '2px solid var(--verde-medio)', color: '#F59E0B', width: '2.2rem', height: '2.2rem' }}
               title="Dar de baja"
             >
               <XCircle style={{ width: '0.8rem', height: '0.8rem' }} />

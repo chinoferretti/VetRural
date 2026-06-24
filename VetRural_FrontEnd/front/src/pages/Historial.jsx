@@ -149,7 +149,7 @@ export default function Historial() {
                       <button
                         onClick={() => descargarMetricas(v)}
                         className="flex items-center justify-center w-9 h-9 rounded-xl transition-colors hover:bg-green-50"
-                        style={{ border: '1.5px solid #E5E7EB', color: 'var(--verde-medio)' }}
+                        style={{ border: '2px solid var(--verde-medio)', color: 'var(--verde-medio)' }}
                         title="Descargar reporte"
                       >
                         <Download className="w-4 h-4" />
@@ -157,7 +157,7 @@ export default function Historial() {
                       <button
                         onClick={() => setConfirmando(v.id)}
                         className="flex items-center justify-center w-9 h-9 rounded-xl transition-colors hover:bg-red-50"
-                        style={{ border: '1.5px solid #E5E7EB', color: '#EF4444' }}
+                        style={{ border: '2px solid var(--verde-medio)', color: '#EF4444' }}
                         title="Eliminar sesión"
                       >
                         <Trash2 className="w-4 h-4" />

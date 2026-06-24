@@ -94,7 +94,7 @@ export default function Animales() {
             <button
               onClick={() => navigate('/animales/bajas')}
               className="flex items-center gap-1.5 rounded-xl font-semibold transition-colors hover:bg-gray-100"
-              style={{ border: '1.5px solid #E5E7EB', padding: '0.45rem 0.75rem', fontSize: '0.8rem', color: '#6B7280', backgroundColor: 'white', whiteSpace: 'nowrap' }}
+              style={{ border: '2px solid var(--verde-medio)', padding: '0.45rem 0.75rem', fontSize: '0.8rem', color: '#6B7280', backgroundColor: 'white', whiteSpace: 'nowrap' }}
             >
               Inactivos
             </button>

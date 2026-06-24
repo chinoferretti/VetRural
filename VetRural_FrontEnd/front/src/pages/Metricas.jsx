@@ -233,7 +233,7 @@ export default function Metricas() {
               onClick={handleDescargarPDF}
               disabled={descargando}
               className="flex items-center gap-1.5 rounded-xl font-semibold transition-colors hover:bg-gray-100"
-              style={{ border: '1.5px solid #E5E7EB', padding: '0.45rem 0.75rem', fontSize: '0.8rem', color: '#374151', backgroundColor: 'white', whiteSpace: 'nowrap', opacity: descargando ? 0.6 : 1 }}
+              style={{ border: '2px solid var(--verde-medio)', padding: '0.45rem 0.75rem', fontSize: '0.8rem', color: '#374151', backgroundColor: 'white', whiteSpace: 'nowrap', opacity: descargando ? 0.6 : 1 }}
               title={descargando ? 'Generando PDF…' : 'Descargar como PDF'}
             >
               {descargando
@@ -244,7 +244,7 @@ export default function Metricas() {
             <button
               onClick={handleCompartir}
               className="flex items-center gap-1.5 rounded-xl font-semibold transition-colors hover:bg-green-50"
-              style={{ border: '1.5px solid #86EFAC', padding: '0.45rem 0.75rem', fontSize: '0.8rem', color: 'var(--verde-oscuro)', backgroundColor: 'white', whiteSpace: 'nowrap' }}
+              style={{ border: '2px solid var(--verde-medio)', padding: '0.45rem 0.75rem', fontSize: '0.8rem', color: 'var(--verde-oscuro)', backgroundColor: 'white', whiteSpace: 'nowrap' }}
               title="Compartir métricas"
             >
               <Share2 className="w-4 h-4" />
@@ -485,7 +485,7 @@ export default function Metricas() {
                           <Tooltip
                             formatter={(v) => [`${v} (${total > 0 ? Math.round(v / total * 100) : 0}%)`, 'Animales']}
                             contentStyle={{ borderRadius: '0.75rem', border: '1px solid #E5E7EB' }} />
-                          <Bar dataKey="cantidad" fill="var(--verde-claro)" radius={[0, 6, 6, 0]}>
+                          <Bar dataKey="cantidad" fill="var(--verde-medio)" radius={[0, 6, 6, 0]}>
                             <LabelList dataKey="cantidad" position="right"
                               formatter={(v) => `${v} (${total > 0 ? Math.round(v / total * 100) : 0}%)`}
                               style={{ fontSize: 11, fill: '#374151' }} />

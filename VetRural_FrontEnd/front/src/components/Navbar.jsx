@@ -14,7 +14,7 @@ export default function Navbar() {
   const location = useLocation();
 
   const enInicio = location.pathname === '/dashboard';
-  const enSesionActiva = /^\/sesion(\/animal|\/registro)?$/.test(location.pathname);
+  const enSesionActiva = /^\/sesion(\/animal|\/registro)$/.test(location.pathname);
   const mostrarVolver = !enInicio && !enSesionActiva;
 
   function resolverVolver(pathname) {

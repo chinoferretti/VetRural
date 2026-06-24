@@ -228,14 +228,6 @@ export default function ComenzarSesion() {
 
       {/* Header */}
       <div className="flex items-center gap-3" style={{ flexShrink: 0 }}>
-        <button onClick={() => navigate('/dashboard')}
-          className="flex items-center justify-center w-10 h-10 rounded-xl flex-shrink-0 transition-colors hover:bg-gray-100"
-          style={{ border: '1.5px solid #E5E7EB', color: '#6B7280' }}
-          aria-label="Volver al menú principal">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className="w-5 h-5">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-          </svg>
-        </button>
         <h1 className="text-2xl font-bold" style={{ color: 'var(--verde-oscuro)' }}>Preparar sesión</h1>
       </div>
 
