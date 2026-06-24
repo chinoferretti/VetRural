@@ -4,7 +4,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { Scale, Hand, Syringe, Smile, Download, Share2, CheckCircle2, AlertTriangle, PawPrint } from 'lucide-react';
 import { useEstablecimiento } from '../context/EstablecimientoContext';
 import { useAuth } from '../context/AuthContext';
-import { generarHTMLReporte, compartirPDF, abrirEImprimir, nombreArchivoPDF } from '../utils/reporteUtils';
+import { generarHTMLReporte, compartirPDF, descargarPDF, nombreArchivoPDF } from '../utils/reporteUtils';
 import { calcularMetricasApi } from '../api/sesionesApi';
 import LoadingSpinner from '../components/LoadingSpinner';
 
@@ -81,8 +81,9 @@ export default function SesionResumen() {
   const { seleccionado } = useEstablecimiento();
   const { usuario } = useAuth();
   const historialKey = `vetrural_historial_est_${seleccionado?.id || usuario?.id || 'anon'}`;
-  const [metricas,   setMetricas]   = useState(null);
-  const [filtroSexo, setFiltroSexo] = useState('Todos');
+  const [metricas,      setMetricas]      = useState(null);
+  const [filtroSexo,   setFiltroSexo]   = useState('Todos');
+  const [descargando,  setDescargando]  = useState(false);
 
   const registros = state?.registros ?? [];
   const trabajos  = state?.trabajos  ?? [];
@@ -152,7 +153,12 @@ export default function SesionResumen() {
     totalAnimales: total, trabajosDisplay, metricas: m,
   });
 
-  const handleDescargarPDF = () => abrirEImprimir(getHTML());
+  const handleDescargarPDF = async () => {
+    if (descargando) return;
+    setDescargando(true);
+    try { await descargarPDF(getHTML(), nombreArchivo); }
+    finally { setDescargando(false); }
+  };
 
   const handleCompartir = () => compartirPDF(getHTML(), nombreArchivo, titulo);
 
@@ -183,11 +189,13 @@ export default function SesionResumen() {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
               </svg>
             </button>
-            <button onClick={handleDescargarPDF}
+            <button onClick={handleDescargarPDF} disabled={descargando}
               className="flex items-center justify-center w-9 h-9 rounded-xl transition-colors hover:bg-green-50"
-              style={{ border: '1.5px solid #E5E7EB', color: 'var(--verde-medio)' }}
-              title="Descargar reporte PDF">
-              <Download className="w-4 h-4" />
+              style={{ border: '1.5px solid #E5E7EB', color: 'var(--verde-medio)', opacity: descargando ? 0.6 : 1 }}
+              title={descargando ? 'Generando PDF…' : 'Descargar reporte PDF'}>
+              {descargando
+                ? <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="31.4" strokeDashoffset="10" /></svg>
+                : <Download className="w-4 h-4" />}
             </button>
             <button onClick={handleCompartir}
               className="flex items-center justify-center w-9 h-9 rounded-xl transition-colors hover:bg-green-50"

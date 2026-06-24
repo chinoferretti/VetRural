@@ -7,7 +7,7 @@ import { useAuth } from '../context/AuthContext';
 import { getMetricasEstablecimiento } from '../api/establecimientosApi';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { PawPrint, Scale, Clock, Heart, CircleSlash, Users, Stethoscope, CalendarDays, Activity, AlertTriangle, Download, Share2, CheckCircle2 } from 'lucide-react';
-import { generarHTMLMetricas, abrirEImprimir, compartirPDF, nombreArchivoPDF } from '../utils/reporteUtils';
+import { generarHTMLMetricas, descargarPDF, compartirPDF, nombreArchivoPDF } from '../utils/reporteUtils';
 
 const SEXOS = ['Todos', 'Hembra', 'Macho'];
 
@@ -172,15 +172,23 @@ export default function Metricas() {
   const [sexo, setSexo]       = useState('Todos');
   const [lote, setLote]       = useState('Todos');
   const [metricas, setMetricas] = useState(null);
-  const [cargando, setCargando] = useState(false);
-  const [error,    setError]    = useState('');
+  const [cargando,     setCargando]     = useState(false);
+  const [error,        setError]        = useState('');
+  const [descargando,  setDescargando]  = useState(false);
 
   const sesion = useSesionStats();
   const fechaISO = useMemo(() => new Date().toISOString().slice(0, 10), []);
 
-  const handleDescargarPDF = useCallback(() => {
-    abrirEImprimir(generarHTMLMetricas({ seleccionado, metricas, sesion, sexo, lote }));
-  }, [seleccionado, metricas, sesion, sexo, lote]);
+  const handleDescargarPDF = useCallback(async () => {
+    if (descargando) return;
+    setDescargando(true);
+    try {
+      const nombre = nombreArchivoPDF(seleccionado?.nombre, fechaISO);
+      await descargarPDF(generarHTMLMetricas({ seleccionado, metricas, sesion, sexo, lote }), nombre);
+    } finally {
+      setDescargando(false);
+    }
+  }, [seleccionado, metricas, sesion, sexo, lote, fechaISO, descargando]);
 
   const handleCompartir = useCallback(async () => {
     const html = generarHTMLMetricas({ seleccionado, metricas, sesion, sexo, lote });
@@ -223,11 +231,14 @@ export default function Metricas() {
           <div className="flex gap-2 mt-1">
             <button
               onClick={handleDescargarPDF}
+              disabled={descargando}
               className="flex items-center gap-1.5 rounded-xl font-semibold transition-colors hover:bg-gray-100"
-              style={{ border: '1.5px solid #E5E7EB', padding: '0.45rem 0.75rem', fontSize: '0.8rem', color: '#374151', backgroundColor: 'white', whiteSpace: 'nowrap' }}
-              title="Descargar como PDF"
+              style={{ border: '1.5px solid #E5E7EB', padding: '0.45rem 0.75rem', fontSize: '0.8rem', color: '#374151', backgroundColor: 'white', whiteSpace: 'nowrap', opacity: descargando ? 0.6 : 1 }}
+              title={descargando ? 'Generando PDF…' : 'Descargar como PDF'}
             >
-              <Download className="w-4 h-4" />
+              {descargando
+                ? <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="31.4" strokeDashoffset="10" /></svg>
+                : <Download className="w-4 h-4" />}
               PDF
             </button>
             <button

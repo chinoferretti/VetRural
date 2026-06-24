@@ -1,3 +1,6 @@
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
+
 const DENTADURA_LABELS = { 'De_Leche': 'De leche', 'Mixta': 'Mixta', 'Permanente': 'Permanente' };
 
 // Estimación de edad a partir de dientes + dentadura + deterioro
@@ -261,30 +264,75 @@ export function nombreArchivoPDF(establecimiento, fechaISO) {
   return `${base}_${fechaISO || new Date().toISOString().slice(0, 10)}.pdf`;
 }
 
-// ── Abrir HTML en ventana nueva con auto-print ────────────────────────────────
+// ── Renderizar HTML → jsPDF (interno) ────────────────────────────────────────
 
-export function abrirEImprimir(htmlContent) {
-  const blob = new Blob([htmlContent], { type: 'text/html' });
-  const url  = URL.createObjectURL(blob);
-  window.open(url, '_blank');
-  setTimeout(() => URL.revokeObjectURL(url), 15000);
+async function _renderPDF(htmlContent) {
+  const html = htmlContent.replace(/<script[\s\S]*?<\/script>/gi, '');
+
+  const container = document.createElement('div');
+  container.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:740px;background:#fff;';
+  container.innerHTML = html;
+  document.body.appendChild(container);
+
+  try {
+    const canvas = await html2canvas(container, {
+      scale: 2,
+      useCORS: true,
+      logging: false,
+      backgroundColor: '#ffffff',
+    });
+
+    const imgData = canvas.toDataURL('image/png');
+    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const pageW = pdf.internal.pageSize.getWidth();
+    const pageH = pdf.internal.pageSize.getHeight();
+    const ratio = pageW / canvas.width;
+    const totalH = canvas.height * ratio;
+
+    let remaining = totalH;
+    let yOffset = 0;
+    while (remaining > 0) {
+      pdf.addImage(imgData, 'PNG', 0, -yOffset, pageW, totalH);
+      remaining -= pageH;
+      yOffset += pageH;
+      if (remaining > 0) pdf.addPage();
+    }
+
+    return pdf;
+  } finally {
+    document.body.removeChild(container);
+  }
 }
 
-// ── Compartir o abrir como PDF ────────────────────────────────────────────────
+// ── Descargar PDF real ────────────────────────────────────────────────────────
+
+export async function descargarPDF(htmlContent, nombreArchivo) {
+  const pdf = await _renderPDF(htmlContent);
+  pdf.save(nombreArchivo);
+}
+
+// ── Compartir PDF real ────────────────────────────────────────────────────────
 
 export async function compartirPDF(htmlContent, nombreArchivo, titulo) {
-  const blob = new Blob([htmlContent], { type: 'text/html' });
   if (navigator.share) {
-    const file = new File([blob], nombreArchivo, { type: 'application/pdf' });
-    const canFiles = navigator.canShare?.({ files: [file] });
     try {
-      await navigator.share(canFiles ? { title: titulo, files: [file] } : { title: titulo, url: URL.createObjectURL(blob) });
+      const pdf = await _renderPDF(htmlContent);
+      const blob = pdf.output('blob');
+      const file = new File([blob], nombreArchivo, { type: 'application/pdf' });
+      if (navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ title: titulo, files: [file] });
+        return;
+      }
+      const url = URL.createObjectURL(blob);
+      try { await navigator.share({ title: titulo, url }); } finally {
+        setTimeout(() => URL.revokeObjectURL(url), 15000);
+      }
       return;
     } catch (e) {
       if (e.name === 'AbortError') return;
     }
   }
-  abrirEImprimir(htmlContent);
+  await descargarPDF(htmlContent, nombreArchivo);
 }
 
 // ── Reporte de métricas del establecimiento (PDF) ────────────────────────────
