@@ -1,0 +1,52 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: vetrural-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: "vetrural"
+      MYSQL_DATABASE: vetrural
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  back:
+    build: ./VetRural_BackEnd/VetRural/back
+    container_name: vetrural-back
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/vetrural?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: "vetrural"
+    ports:
+      - "8080:8080"
+
+  front:                          # ← NUEVO
+    build: ./VetRural_FrontEnd/front 
+    container_name: vetrural-front
+    restart: unless-stopped
+    depends_on:
+      - back
+    ports:
+      - "3000:80"
+
+  adminer:
+    image: adminer
+    container_name: vetrural-adminer
+    restart: unless-stopped
+    depends_on:
+      - mysql
+    ports:
+      - "8081:8080"
+
+volumes:
+  mysql-data:
